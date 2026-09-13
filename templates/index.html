@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BK Tools - Production Suite</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        darkBg: '#0f1015',
+                        sidebarBg: '#14161f',
+                        cardBg: '#1b1e29',
+                        inputBg: '#14161f',
+                        accentOrange: '#ff7700',
+                        accentOrangeHover: '#e56b00',
+                        borderDark: '#2a2e3d'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f1015; }
+        ::-webkit-scrollbar-thumb { background: #2a2e3d; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #ff7700; }
+
+        /* Trạng thái "đã chọn / đã copy" cho các ô Title - đặt trong <style> riêng để luôn
+           hiển thị đúng màu xanh, không phụ thuộc thứ tự nạp class của Tailwind CDN */
+        .title-copied {
+            background-color: rgba(6, 78, 59, 0.35) !important;
+            border-color: #10b981 !important;
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.45) !important;
+        }
+        .title-copied .title-copy-text {
+            color: #6ee7b7 !important;
+        }
+    </style>
+</head>
+<body class="bg-darkBg text-gray-200 font-sans antialiased h-screen overflow-hidden flex m-0 p-0">
+
+    <!-- SIDEBAR TRÁI -->
+    <aside class="w-64 bg-sidebarBg border-r border-borderDark flex flex-col justify-between shrink-0 select-none h-full">
+        <div>
+            <!-- Header Logo -->
+            <div class="p-4 border-b border-borderDark">
+                <div class="text-accentOrange font-extrabold tracking-wider text-lg">BK TOOLS</div>
+                <div class="text-[10px] text-gray-400 tracking-widest uppercase">PRODUCTION SUITE</div>
+            </div>
+
+            <!-- Project Selector & Nút HH-Media Tools đồng bộ -->
+            <div class="p-4 border-b border-borderDark space-y-3">
+                <div class="flex justify-between items-center">
+                    <label class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Project</label>
+                    <button id="syncGlobalToolsBtn" class="border border-borderDark bg-cardBg hover:border-accentOrange text-[11px] px-2 py-1 rounded text-gray-300 transition flex items-center gap-1.5 cursor-pointer" title="Đồng bộ toàn hệ thống">
+                        <i class="fa-solid fa-bars-progress text-accentOrange text-[10px]"></i> HH-Media tools
+                    </button>
+                </div>
+
+                <div class="relative">
+                    <select id="projectSelectDropdown" onchange="handleProjectSelect(this)" class="w-full bg-inputBg border border-borderDark text-sm rounded px-3 py-2 appearance-none focus:outline-none focus:border-accentOrange text-gray-300 cursor-pointer">
+                        <option value="">New...</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-3 top-3 text-xs text-gray-400 pointer-events-none"></i>
+                </div>
+
+                <div class="flex gap-2 relative">
+                    <button id="openNewProjectBtn" class="flex-1 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium transition flex items-center justify-center gap-1 cursor-pointer">
+                        <i class="fa-solid fa-plus text-[10px]"></i> New
+                    </button>
+                    <button id="saveProjectBtn" class="flex-1 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium transition flex items-center justify-center gap-1 cursor-pointer">
+                        <i class="fa-solid fa-floppy-disk text-[10px]"></i> Save
+                    </button>
+
+                    <div class="relative">
+                        <button id="moreMenuBtn" class="px-3 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium transition cursor-pointer">
+                            ... More
+                        </button>
+                        <div id="moreDropdownMenu" class="hidden absolute right-0 top-8 w-40 bg-cardBg border border-borderDark rounded-lg shadow-xl z-50 py-1 text-xs">
+                            <button onclick="openRenameModal()" class="w-full text-left px-3 py-2 hover:bg-borderDark text-gray-300 flex items-center gap-2 cursor-pointer">
+                                <i class="fa-solid fa-pen text-[10px] text-accentOrange"></i> Đổi tên Project
+                            </button>
+                            <button onclick="exportActiveProject()" class="w-full text-left px-3 py-2 hover:bg-borderDark text-gray-300 flex items-center gap-2 cursor-pointer">
+                                <i class="fa-solid fa-file-arrow-down text-[10px] text-cyan-400"></i> Export JSON
+                            </button>
+                            <div class="border-t border-borderDark my-1"></div>
+                            <button onclick="deleteActiveProject()" class="w-full text-left px-3 py-2 hover:bg-red-950/30 text-red-400 flex items-center gap-2 cursor-pointer">
+                                <i class="fa-solid fa-trash-can text-[10px]"></i> Xóa Project
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Profile Clickable -->
+            <div id="openProfileModalBtn" class="px-4 py-3 border-b border-borderDark cursor-pointer hover:bg-cardBg/50 transition">
+                <div class="flex justify-between items-center text-xs mb-1">
+                    <span class="text-gray-400 uppercase tracking-wider">Active Profile</span>
+                    <span id="activeProfileId" class="text-gray-500 font-mono">061</span>
+                </div>
+                <div id="activeProfileName" class="text-sm text-gray-400 italic">Chưa chọn profile</div>
+            </div>
+
+            <!-- Menu Navigation -->
+            <nav class="py-2 space-y-1" id="sidebarNav">
+                <a href="/" class="nav-tab flex items-center px-4 py-2.5 bg-cardBg text-accentOrange border-r-4 border-accentOrange text-sm font-medium transition">Topic Ideator</a>
+                <a href="/script_writer.html" onclick="autoSaveCurrentTab()" class="nav-tab flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 hover:text-gray-200 text-sm transition"><span class="w-6 text-xs text-gray-500">1</span> Script Writer</a>
+                <a href="/scene_breakdown.html" onclick="autoSaveCurrentTab()" class="nav-tab flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 hover:text-gray-200 text-sm transition"><span class="w-6 text-xs text-gray-500">2</span> Scene Breakdown</a>
+                <a href="/asset_prompts.html" onclick="autoSaveCurrentTab()" class="nav-tab flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 hover:text-gray-200 text-sm transition"><span class="w-6 text-xs text-gray-500">3</span> Asset Prompts</a>
+                <a href="/camera_movement.html" onclick="autoSaveCurrentTab()" class="nav-tab flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 hover:text-gray-200 text-sm transition"><span class="w-6 text-xs text-gray-500">4</span> Camera Movement</a>
+                <a href="/thumbnail.html" onclick="autoSaveCurrentTab()" class="nav-tab flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 hover:text-gray-200 text-sm transition"><span class="w-6 text-xs text-gray-500">5</span> Thumbnail</a>
+                <a href="/video_metadata.html" onclick="autoSaveCurrentTab()" class="nav-tab flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 hover:text-gray-200 text-sm transition"><span class="w-6 text-xs text-gray-500">6</span> Video Metadata</a>
+                <a href="/upload_qc.html" onclick="autoSaveCurrentTab()" class="nav-tab flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 hover:text-gray-200 text-sm transition"><span class="w-6 text-xs text-gray-500">7</span> Upload QC</a>
+            </nav>
+        </div>
+
+        <!-- Footer Sidebar -->
+        <div class="p-4 border-t border-borderDark space-y-3">
+            <div>
+                <label class="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">GEMINI API KEY</label>
+                <div class="flex gap-1">
+                    <input type="password" id="sidebarApiKeyInput" placeholder="Nhập API Key..." 
+                        class="w-full bg-inputBg border border-borderDark rounded px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-accentOrange font-mono">
+                    <button id="sidebarSaveKeyBtn" class="bg-accentOrange hover:bg-accentOrangeHover text-white text-xs px-3 py-1.5 rounded transition cursor-pointer font-bold flex items-center justify-center min-w-[50px]">
+                        Lưu
+                    </button>
+                </div>
+            </div>
+            <div class="flex items-center justify-between text-[11px] pt-1">
+                <span class="text-gray-500">Trạng thái:</span>
+                <span id="apiKeyStatus" class="text-gray-400 font-medium">✔ Chưa cấu hình</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- NỘI DUNG CHÍNH (MAIN CONTENT) -->
+    <main class="flex-1 flex flex-col h-screen overflow-y-auto w-full">
+        <header class="h-16 border-b border-borderDark px-8 flex justify-between items-center bg-darkBg shrink-0">
+            <div>
+                <h1 id="mainHeaderTitle" class="text-lg font-bold text-gray-100 flex items-center gap-2">Topic Ideator</h1>
+                <p id="mainHeaderDesc" class="text-xs text-gray-400">Generate validated topics với hook titles &bull; unique angle &bull; CTR score</p>
+            </div>
+        </header>
+
+        <!-- Form Body Container -->
+        <div id="mainContentBody" class="p-8 max-w-full w-full mx-auto space-y-6">
+
+            <!-- CONTEXT FILES -->
+            <div>
+                <div class="text-xs text-accentOrange font-semibold tracking-wider mb-3">| CONTEXT FILES (OPTIONAL)</div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div id="fileBoxStyleGuide" class="bg-cardBg border border-borderDark rounded-lg p-6 flex flex-col items-center justify-center text-center transition group">
+                        <i class="fa-solid fa-file-lines text-2xl text-amber-500 mb-2"></i>
+                        <span class="text-xs font-bold tracking-wider text-gray-300">STYLE GUIDE</span>
+                    </div>
+                    <div id="fileBoxDna" class="bg-cardBg border border-borderDark rounded-lg p-6 flex flex-col items-center justify-center text-center transition group">
+                        <i class="fa-solid fa-dna text-2xl text-cyan-400 mb-2"></i>
+                        <span class="text-xs font-bold tracking-wider text-gray-300">DNA KÊNH</span>
+                    </div>
+                    <div id="fileBoxTopicBank" class="bg-cardBg border border-borderDark rounded-lg p-6 flex flex-col items-center justify-center text-center transition group">
+                        <i class="fa-solid fa-file-pen text-2xl text-gray-400 mb-2"></i>
+                        <span class="text-xs font-bold tracking-wider text-gray-300">TOPICS ĐÃ LÀM</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NGÁCH KÊNH -->
+            <div>
+                <div class="text-xs text-accentOrange font-semibold tracking-wider mb-3">| NGÁCH KÊNH</div>
+                <div class="flex flex-wrap gap-2 items-center" id="ngachKenhGroup">
+                    <button type="button" onclick="selectNgach(this, 'Tài chính')" class="ngach-btn bg-cardBg border border-borderDark hover:border-gray-500 text-xs px-4 py-2 rounded text-gray-400 transition cursor-pointer">Tài chính</button>
+                    <button type="button" onclick="selectNgach(this, 'Tội phạm')" class="ngach-btn bg-cardBg border border-borderDark hover:border-gray-500 text-xs px-4 py-2 rounded text-gray-400 transition cursor-pointer">Tội phạm</button>
+                    <button type="button" onclick="selectNgach(this, 'Lịch sử')" class="ngach-btn bg-cardBg border border-emerald-500 bg-emerald-950/20 text-xs px-4 py-2 rounded text-emerald-400 font-medium transition shadow-sm cursor-pointer">Lịch sử</button>
+                    <button type="button" onclick="selectNgach(this, 'Khoa học')" class="ngach-btn bg-cardBg border border-borderDark hover:border-gray-500 text-xs px-4 py-2 rounded text-gray-400 transition cursor-pointer">Khoa học</button>
+                    <button type="button" onclick="selectNgach(this, 'Tâm lý học')" class="ngach-btn bg-cardBg border border-borderDark hover:border-gray-500 text-xs px-4 py-2 rounded text-gray-400 transition cursor-pointer">Tâm lý học</button>
+                    <button type="button" onclick="selectNgach(this, 'Địa chính trị')" class="ngach-btn bg-cardBg border border-borderDark hover:border-gray-500 text-xs px-4 py-2 rounded text-gray-400 transition cursor-pointer">Địa chính trị</button>
+                    <button type="button" onclick="selectNgach(this, 'Tiểu sử')" class="ngach-btn bg-cardBg border border-borderDark hover:border-gray-500 text-xs px-4 py-2 rounded text-gray-400 transition cursor-pointer">Tiểu sử</button>
+                    <button type="button" onclick="selectNgach(this, 'Triết học')" class="ngach-btn bg-cardBg border border-borderDark hover:border-gray-500 text-xs px-4 py-2 rounded text-gray-400 transition cursor-pointer">Triết học</button>
+                    <button type="button" onclick="selectNgach(this, 'Tùy chỉnh')" class="ngach-btn border border-dashed border-borderDark hover:border-accentOrange text-xs px-3 py-2 rounded text-accentOrange transition cursor-pointer">+ Tùy chỉnh</button>
+                </div>
+            </div>
+
+            <!-- Input Text Ngách Kênh -->
+            <div>
+                <input type="text" id="ngachKenhInput" value="조선 역사 속 기록의 뒷장, 이름 없는 사람들의 이야기, 실록과전설 사이의 진실" oninput="autoSaveCurrentTab()"
+                    class="w-full bg-inputBg border border-borderDark rounded-md px-4 py-3 text-sm text-gray-200 focus:outline-none focus:border-accentOrange">
+            </div>
+
+            <!-- Controls Grid -->
+            <div class="grid grid-cols-4 gap-4">
+                <div>
+                    <label class="text-[11px] text-gray-400 uppercase tracking-wider block mb-1">SỐ TOPICS</label>
+                    <div class="relative">
+                        <select id="soTopicsSelect" onchange="autoSaveCurrentTab()" class="w-full bg-inputBg border border-borderDark text-sm rounded px-3 py-2.5 appearance-none focus:outline-none focus:border-accentOrange text-gray-200 cursor-pointer">
+                            <option value="5">5 topics</option>
+                            <option value="10" selected>10 topics</option>
+                            <option value="15">15 topics</option>
+                            <option value="20">20 topics</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-xs text-gray-400 pointer-events-none"></i>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[11px] text-gray-400 uppercase tracking-wider block mb-1">NGÔN NGỮ OUTPUT</label>
+                    <div class="relative">
+                        <select id="ngonNguSelect" onchange="autoSaveCurrentTab()" class="w-full bg-inputBg border border-borderDark text-sm rounded px-3 py-2.5 appearance-none focus:outline-none focus:border-accentOrange text-gray-200 cursor-pointer">
+                            <option value="Tiếng Việt">Tiếng Việt</option>
+                            <option value="English">English</option>
+                            <option value="Tiếng Đức">Tiếng Đức</option>
+                            <option value="Tiếng Bồ Đào Nha">Tiếng Bồ Đào Nha</option>
+                            <option value="Tiếng Tây Ban Nha">Tiếng Tây Ban Nha</option>
+                            <option value="Tiếng Hàn">Tiếng Hàn</option>
+                            <option value="Tiếng Nhật">Tiếng Nhật</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-xs text-gray-400 pointer-events-none"></i>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[11px] text-gray-400 uppercase tracking-wider block mb-1">KÊNH THAM CHIẾU (STYLE)</label>
+                    <input type="text" id="kenhThamChieuInput" placeholder="VD: https://youtube.com/@channel" oninput="autoSaveCurrentTab()"
+                        class="w-full bg-inputBg border border-borderDark rounded px-3 py-2.5 text-sm text-gray-400 placeholder:text-gray-600 focus:outline-none focus:border-accentOrange">
+                </div>
+
+                <div>
+                    <label class="text-[11px] text-gray-400 uppercase tracking-wider block mb-1">FOCUS</label>
+                    <div class="relative">
+                        <select id="focusSelect" onchange="autoSaveCurrentTab()" class="w-full bg-inputBg border border-borderDark text-sm rounded px-3 py-2.5 appearance-none focus:outline-none focus:border-accentOrange text-gray-200 cursor-pointer">
+                            <option value="Cân bằng">Cân bằng</option>
+                            <option value="CTR cao nhất">CTR cao nhất</option>
+                            <option value="Evergreen nhất">Evergreen nhất</option>
+                            <option value="Góc độ độc đáo">Góc độ độc đáo</option>
+                            <option value="Dễ làm nhất">Dễ làm nhất</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-xs text-gray-400 pointer-events-none"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- YÊU CẦU BỔ SUNG -->
+            <div>
+                <div class="text-xs text-accentOrange font-semibold tracking-wider mb-2">| YÊU CẦU BỔ SUNG (OPTIONAL)</div>
+                <textarea id="yeuCauBoSungInput" rows="3" placeholder="VD: Tránh topics về chiến tranh, ưu tiên nhân vật nữ..." oninput="autoSaveCurrentTab()"
+                    class="w-full bg-inputBg border border-borderDark rounded-md p-3 text-sm text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-accentOrange"></textarea>
+            </div>
+
+            <!-- Action Buttons & Sort -->
+            <div class="flex items-center justify-between pt-2">
+                <div class="flex items-center gap-3">
+                    <button id="generateBtn" class="bg-accentOrange hover:bg-accentOrangeHover text-white text-xs font-bold px-6 py-2.5 rounded shadow-lg transition flex items-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-bolt text-[11px]"></i> Generate Topics
+                    </button>
+                    <button onclick="resetForm()" class="bg-cardBg border border-borderDark text-gray-400 hover:text-gray-200 text-xs px-4 py-2.5 rounded transition flex items-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-xmark"></i> Reset
+                    </button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500">Sort:</span>
+                    <button class="bg-cardBg border border-borderDark hover:border-gray-500 text-xs px-3 py-1.5 rounded text-gray-300 cursor-pointer">CTR</button>
+                    <button class="bg-cardBg border border-borderDark hover:border-gray-500 text-xs px-3 py-1.5 rounded text-gray-300 cursor-pointer">Easy</button>
+                </div>
+            </div>
+
+            <!-- TOPICS SECTION -->
+            <div class="pt-4 border-t border-borderDark pb-8">
+                <div id="topicsHeader" class="text-xs text-accentOrange font-semibold tracking-wider mb-4">| TOPICS (0)</div>
+                <div id="topicsResultContainer" class="border border-dashed border-borderDark rounded-xl p-12 text-center text-gray-600 text-sm">
+                    Chưa có topic nào được tạo. Hãy nhấn "Generate Topics" để bắt đầu.
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- POPUP 1: DANH SÁCH PROFILES KÊNH -->
+    <div id="profileModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="bg-sidebarBg border border-borderDark w-[600px] rounded-xl p-6 shadow-2xl relative">
+            <div class="flex justify-between items-center pb-4 border-b border-borderDark">
+                <div>
+                    <h3 class="text-base font-bold text-gray-100 flex items-center gap-2">
+                        <i class="fa-solid fa-folder-open text-accentOrange"></i> Profiles Kênh
+                    </h3>
+                    <p class="text-xs text-gray-400 mt-0.5">Lưu cài đặt theo từng kênh — chọn profile là tất cả tools tự apply</p>
+                </div>
+                <button id="closeProfileModal" class="text-gray-400 hover:text-white text-xs cursor-pointer">✕ Đóng</button>
+            </div>
+
+            <div id="profileListContainer" class="py-6 max-h-[300px] overflow-y-auto space-y-3">
+                <div class="text-center text-gray-500 text-sm py-8">Chưa có profile nào. Tạo profile mới để bắt đầu.</div>
+            </div>
+
+            <div class="flex justify-between items-center pt-4 border-t border-borderDark">
+                <button id="openCreateProfileBtn" class="bg-accentOrange hover:bg-accentOrangeHover text-white text-xs font-bold px-4 py-2.5 rounded transition flex items-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-plus"></i> Tạo Profile Mới
+                </button>
+                <button id="closeProfileModalBottom" class="bg-cardBg border border-borderDark hover:bg-borderDark text-xs px-4 py-2 rounded text-gray-300 cursor-pointer">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUP 2: TẠO PROFILE MỚI -->
+    <div id="createProfileModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-sidebarBg border border-borderDark w-full max-w-3xl rounded-xl shadow-2xl relative flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center p-6 border-b border-borderDark shrink-0">
+                <h3 class="text-base font-bold text-gray-100 flex items-center gap-2">
+                    <i class="fa-solid fa-sparkles text-accentOrange"></i> Tạo Profile mới
+                </h3>
+                <button id="closeCreateModal" class="text-gray-400 hover:text-white text-xs cursor-pointer">✕ Đóng</button>
+            </div>
+
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[11px] text-gray-400 uppercase tracking-wider block mb-1">TÊN KÊNH *</label>
+                        <input type="text" id="newTenKenh" placeholder="VD: RX Crime VN" class="w-full bg-inputBg border border-borderDark rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-accentOrange">
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-gray-400 uppercase tracking-wider block mb-1">NGÁCH</label>
+                        <input type="text" id="newNgach" placeholder="VD: Tội phạm & Scandal" class="w-full bg-inputBg border border-borderDark rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-accentOrange">
+                    </div>
+                </div>
+
+                <div class="text-xs text-accentOrange font-semibold tracking-wider pt-2">DEFAULT SETTINGS</div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">VISUAL STYLE</label>
+                        <input type="text" id="newVisual" value="Crayon Capital — Dark" class="w-full bg-inputBg border border-borderDark rounded px-3 py-2 text-xs text-gray-200">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">NGÔN NGỮ</label>
+                        <select id="newNgonNgu" class="w-full bg-inputBg border border-borderDark rounded px-3 py-2 text-xs text-gray-200 cursor-pointer">
+                            <option value="Tiếng Việt">Tiếng Việt</option>
+                            <option value="English">English</option>
+                            <option value="Tiếng Đức">Tiếng Đức</option>
+                            <option value="Tiếng Bồ Đào Nha">Tiếng Bồ Đào Nha</option>
+                            <option value="Tiếng Tây Ban Nha">Tiếng Tây Ban Nha</option>
+                            <option value="Tiếng Hàn">Tiếng Hàn</option>
+                            <option value="Tiếng Nhật">Tiếng Nhật</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">POV STYLE</label>
+                        <select id="newPov" class="w-full bg-inputBg border border-borderDark rounded px-3 py-2 text-xs text-gray-200 cursor-pointer">
+                            <option value="Ngôi thứ 2 (Bạn)">Ngôi thứ 2 (Bạn)</option>
+                            <option value="Ngôi thứ 1 (Tôi)">Ngôi thứ 1 (Tôi)</option>
+                            <option value="Ngôi thứ 3 (Khách quan / Quan sát)">Ngôi thứ 3 (Khách quan / Quan sát)</option>
+                            <option value="Ngôi thứ 3 (Toàn tri / Biết tuốt)">Ngôi thứ 3 (Toàn tri / Biết tuốt)</option>
+                            <option value="Góc nhìn Phóng sự / Người ngoài cuộc">Góc nhìn Phóng sự / Người ngoài cuộc</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">CẤU TRÚC</label>
+                        <input type="text" id="newCucTruc" value="Levels (POV)" class="w-full bg-inputBg border border-borderDark rounded px-3 py-2 text-xs text-gray-200">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">SỐ PHẦN</label>
+                        <input type="number" id="newSoPhan" value="8" class="w-full bg-inputBg border border-borderDark rounded px-3 py-2 text-xs text-gray-200">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">TARGET PHÚT</label>
+                        <input type="number" id="newTargetPhut" value="12" class="w-full bg-inputBg border border-borderDark rounded px-3 py-2 text-xs text-gray-200">
+                    </div>
+                </div>
+
+                <!-- 4 PROMPT THAM CHIẾU -->
+                <div class="text-xs text-accentOrange font-semibold tracking-wider pt-2">STYLE PROMPTS & LABS</div>
+                <div>
+                    <label class="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">CHARACTER STYLE</label>
+                    <textarea id="newCharStyle" rows="2" class="w-full bg-inputBg border border-borderDark rounded p-2 text-xs text-gray-200">2D flat cartoon Crayon Capital style...</textarea>
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">BACKGROUND STYLE</label>
+                    <textarea id="newBgStyle" rows="2" class="w-full bg-inputBg border border-borderDark rounded p-2 text-xs text-gray-200">2D flat cartoon background...</textarea>
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">SCENE STYLE / AESTHETIC (~40 từ, cố định cả video)</label>
+                    <textarea id="newSceneStyle" rows="2" class="w-full bg-inputBg border border-borderDark rounded p-2 text-xs text-gray-200">2D cartoon illustration with bold thick black ink outlines...</textarea>
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">STYLE REFERENCE PROMPT (GEN 1 lần -> ẢNH CHANNEL-STYLE-REFERENCE)</label>
+                    <textarea id="newStyleRef" rows="2" class="w-full bg-inputBg border border-borderDark rounded p-2 text-xs text-gray-200">Channel visual style reference sheet...</textarea>
+                </div>
+
+                <!-- CONTEXT FILES (3 FILE .MD) -->
+                <div class="text-xs text-accentOrange font-semibold tracking-wider pt-2">CONTEXT FILES</div>
+                <div class="bg-cardBg border border-borderDark p-3 rounded text-xs text-gray-400">
+                    Upload hoặc paste 3 file → bấm <strong class="text-accentOrange">Auto Extract</strong> → tool tự điền tất cả thông tin.
+                </div>
+
+                <!-- STYLE GUIDE -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-[10px] text-gray-400 uppercase tracking-wider">STYLE GUIDE</label>
+                        <div id="wrapperStyleGuide">
+                            <label class="text-[10px] text-accentOrange cursor-pointer hover:underline transition">
+                                📁 Upload.md <input type="file" accept=".md,.txt" class="hidden" onchange="handleFileUpload(event, 'contentStyleGuide', 'wrapperStyleGuide', 'Style Guide')">
+                            </label>
+                        </div>
+                    </div>
+                    <textarea id="contentStyleGuide" rows="2" placeholder="Paste nội dung Style Guide .md vào đây hoặc upload file..." class="w-full bg-inputBg border border-borderDark rounded p-2 text-xs text-gray-200"></textarea>
+                </div>
+
+                <!-- DNA KÊNH -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-[10px] text-gray-400 uppercase tracking-wider">DNA KÊNH</label>
+                        <div id="wrapperDna">
+                            <label class="text-[10px] text-accentOrange cursor-pointer hover:underline transition">
+                                📁 Upload.md <input type="file" accept=".md,.txt" class="hidden" onchange="handleFileUpload(event, 'contentDna', 'wrapperDna', 'DNA Kênh')">
+                            </label>
+                        </div>
+                    </div>
+                    <textarea id="contentDna" rows="2" placeholder="Paste nội dung DNA .md vào đây hoặc upload file..." class="w-full bg-inputBg border border-borderDark rounded p-2 text-xs text-gray-200"></textarea>
+                </div>
+
+                <!-- CHỦ ĐỀ -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-[10px] text-gray-400 uppercase tracking-wider">CHỦ ĐỀ (TOPIC BANK)</label>
+                        <div id="wrapperTopicBank">
+                            <label class="text-[10px] text-accentOrange cursor-pointer hover:underline transition">
+                                📁 Upload.md <input type="file" accept=".md,.txt" class="hidden" onchange="handleFileUpload(event, 'contentTopicBank', 'wrapperTopicBank', 'Topic Bank')">
+                            </label>
+                        </div>
+                    </div>
+                    <textarea id="contentTopicBank" rows="2" placeholder="Paste nội dung Chủ Đề .md vào đây hoặc upload file..." class="w-full bg-inputBg border border-borderDark rounded p-2 text-xs text-gray-200"></textarea>
+                </div>
+
+                <button id="autoExtractBtn" class="border border-accentOrange hover:bg-accentOrange/10 text-accentOrange text-xs font-semibold px-4 py-2.5 rounded transition flex items-center gap-2 cursor-pointer w-full justify-center">
+                    <i class="fa-solid fa-bolt"></i> Auto Extract từ 3 file
+                </button>
+            </div>
+
+            <!-- Footer Cố Định -->
+            <div class="flex justify-between items-center p-6 border-t border-borderDark shrink-0 bg-sidebarBg">
+                <button id="cancelCreateModal" class="bg-cardBg border border-borderDark hover:bg-borderDark text-xs px-4 py-2 rounded text-gray-300 cursor-pointer">Hủy</button>
+                <button id="saveProfileBtn" class="bg-accentOrange hover:bg-accentOrangeHover text-white text-xs font-bold px-6 py-2.5 rounded transition cursor-pointer">Lưu Profile</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUP 3: TẠO NEW PROJECT -->
+    <div id="newProjectModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-sidebarBg border border-borderDark w-full max-w-lg rounded-xl shadow-2xl relative flex flex-col p-6 space-y-5">
+            <div class="flex justify-between items-center pb-3 border-b border-borderDark">
+                <h3 class="text-base font-bold text-gray-100 flex items-center gap-2">
+                    <i class="fa-solid fa-file-circle-plus text-accentOrange"></i> New Project
+                </h3>
+                <button id="closeNewProjectModal" class="text-gray-400 hover:text-white text-xs cursor-pointer">✕ Đóng</button>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs text-accentOrange font-semibold uppercase tracking-wider block">1. Chọn Kênh (Active Profile)</label>
+                <div class="bg-cardBg border border-accentOrange rounded-lg p-3.5 flex items-center gap-3">
+                    <i class="fa-solid fa-folder-open text-accentOrange text-lg"></i>
+                    <div>
+                        <div id="modalProjectChannelName" class="text-sm font-bold text-gray-200">Chưa chọn kênh</div>
+                        <div class="text-[11px] text-gray-400">Sẽ sử dụng cấu hình DNA & Style của kênh này</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs text-accentOrange font-semibold uppercase tracking-wider block">2. Tên Project</label>
+                <input type="text" id="newProjectNameInput" class="w-full bg-inputBg border border-borderDark rounded-lg px-4 py-3 text-sm text-gray-200 focus:outline-none focus:border-accentOrange font-medium">
+            </div>
+
+            <div class="flex gap-3 pt-3 border-t border-borderDark">
+                <button id="cancelNewProjectBtn" class="flex-1 bg-cardBg border border-borderDark hover:bg-borderDark text-xs py-2.5 rounded-lg text-gray-300 cursor-pointer font-medium transition">Huỷ</button>
+                <button id="confirmCreateProjectBtn" class="flex-1 bg-accentOrange hover:bg-accentOrangeHover text-white text-xs font-bold py-2.5 rounded-lg shadow-lg cursor-pointer transition">Tạo Project</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUP 4: ĐỔI TÊN PROJECT TRỰC QUAN -->
+    <div id="renameProjectModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-sidebarBg border border-borderDark w-full max-w-md rounded-xl shadow-2xl relative flex flex-col p-6 space-y-4">
+            <div class="flex justify-between items-center pb-2 border-b border-borderDark">
+                <h3 class="text-sm font-bold text-gray-100 flex items-center gap-2">
+                    <i class="fa-solid fa-pen text-accentOrange"></i> Đổi tên Project
+                </h3>
+                <button onclick="closeRenameModal()" class="text-gray-400 hover:text-white text-xs cursor-pointer">✕ Đóng</button>
+            </div>
+            <div>
+                <label class="text-[11px] text-gray-400 uppercase tracking-wider block mb-1">TÊN MỚI</label>
+                <input type="text" id="renameProjectInput" class="w-full bg-inputBg border border-borderDark rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-accentOrange font-medium">
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeRenameModal()" class="flex-1 bg-cardBg border border-borderDark hover:bg-borderDark text-xs py-2 rounded text-gray-300 cursor-pointer">Hủy</button>
+                <button onclick="confirmRenameProject()" class="flex-1 bg-accentOrange hover:bg-accentOrangeHover text-white text-xs font-bold py-2 rounded cursor-pointer">Lưu tên mới</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT XỬ LÝ TƯƠNG TÁC GIAO DIỆN & LƯU TRỮ TỪNG FILE QUA API -->
+    <script>
+        let currentActiveProfileId = null;
+        let currentActiveProject = "";
+        let currentTab = 'topic-ideator';
+        let projectCount = 1;
+
+        // Thoát ký tự đặc biệt (dấu nháy, <, >...) để chèn an toàn vào thuộc tính HTML data-*
+        function escapeHtmlAttr(str) {
+            return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        // Click vào 1 ô Title: copy nội dung vào clipboard + tô xanh ô vừa chọn.
+        // Chỉ 1 ô được tô xanh tại 1 thời điểm trong CÙNG 1 danh sách Titles của topic đó.
+        function handleCopyTitleClick(el) {
+            const text = el.dataset.copyText || el.innerText || '';
+
+            navigator.clipboard.writeText(text).catch(err => {
+                console.error('Copy thất bại:', err);
+            });
+
+            const group = el.parentElement;
+            if (group) {
+                group.querySelectorAll('.title-copy-box').forEach(box => {
+                    box.classList.remove('title-copied');
+                    const check = box.querySelector('.title-copy-check');
+                    if (check) check.classList.add('hidden');
+                });
+            }
+
+            el.classList.add('title-copied');
+            const check = el.querySelector('.title-copy-check');
+            if (check) check.classList.remove('hidden');
+        }
+
+        window.onload = function() {
+            initProjects();
+            
+            let savedProj = localStorage.getItem('bk_last_active_project');
+            
+            fetch('/api/projects/list')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        let projects = data.data;
+                        if (!savedProj || !projects.includes(savedProj)) {
+                            savedProj = projects[0] || "Default_Project";
+                        }
+                        currentActiveProject = savedProj;
+                        const selectDropdown = document.getElementById('projectSelectDropdown');
+                        if (selectDropdown) selectDropdown.value = savedProj;
+                        loadProjectData(savedProj);
+                    }
+                });
+
+            const savedApiKey = localStorage.getItem('bk_gemini_api_key');
+            if (savedApiKey) {
+                document.getElementById('sidebarApiKeyInput').value = savedApiKey;
+                const statusEl = document.getElementById('apiKeyStatus');
+                statusEl.className = "text-emerald-400 font-semibold";
+                statusEl.innerText = "✔ Đã cấu hình";
+            }
+        };
+
+        function initProjects() {
+            fetch('/api/projects/list')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        let projects = data.data;
+                        const selectDropdown = document.getElementById('projectSelectDropdown');
+                        if (!selectDropdown) return;
+                        
+                        selectDropdown.innerHTML = '<option value="">New...</option>';
+                        projects.forEach(proj => {
+                            let opt = document.createElement('option');
+                            opt.value = proj;
+                            opt.innerText = proj;
+                            selectDropdown.appendChild(opt);
+                        });
+                        if(currentActiveProject) selectDropdown.value = currentActiveProject;
+                    }
+                });
+        }
+
+        const profileModal = document.getElementById('profileModal');
+        const openProfileModalBtn = document.getElementById('openProfileModalBtn');
+        const closeProfileModal = document.getElementById('closeProfileModal');
+        const closeProfileModalBottom = document.getElementById('closeProfileModalBottom');
+
+        openProfileModalBtn.onclick = () => { profileModal.classList.remove('hidden'); profileModal.classList.add('flex'); loadProfiles(); };
+        closeProfileModal.onclick = () => { profileModal.classList.remove('flex'); profileModal.classList.add('hidden'); };
+        closeProfileModalBottom.onclick = () => { profileModal.classList.remove('flex'); profileModal.classList.add('hidden'); };
+
+        const createProfileModal = document.getElementById('createProfileModal');
+        const openCreateProfileBtn = document.getElementById('openCreateProfileBtn');
+        const closeCreateModal = document.getElementById('closeCreateModal');
+        const cancelCreateModal = document.getElementById('cancelCreateModal');
+
+        openCreateProfileBtn.onclick = () => {  
+            profileModal.classList.remove('flex'); profileModal.classList.add('hidden');
+            createProfileModal.classList.remove('hidden'); createProfileModal.classList.add('flex');  
+        };
+        closeCreateModal.onclick = () => { createProfileModal.classList.remove('flex'); createProfileModal.classList.add('hidden'); };
+        cancelCreateModal.onclick = () => { createProfileModal.classList.remove('flex'); createProfileModal.classList.add('hidden'); };
+
+        function selectNgach(btn, value) {
+            document.querySelectorAll('.ngach-btn').forEach(b => {
+                b.className = "ngach-btn bg-cardBg border border-borderDark hover:border-gray-500 text-xs px-4 py-2 rounded text-gray-400 transition cursor-pointer";
+            });
+            btn.className = "ngach-btn bg-cardBg border border-emerald-500 bg-emerald-950/20 text-xs px-4 py-2 rounded text-emerald-400 font-medium transition shadow-sm cursor-pointer";
+            const input = document.getElementById('ngachKenhInput');
+            if(input) {
+                input.value = value;
+                autoSaveCurrentTab();
+            }
+        }
+
+        const moreMenuBtn = document.getElementById('moreMenuBtn');
+        const moreDropdownMenu = document.getElementById('moreDropdownMenu');
+
+        moreMenuBtn.onclick = (e) => {
+            e.stopPropagation();
+            moreDropdownMenu.classList.toggle('hidden');
+        };
+
+        window.onclick = () => {
+            if (!moreDropdownMenu.classList.contains('hidden')) {
+                moreDropdownMenu.classList.add('hidden');
+            }
+        };
+
+        // --- TỰ ĐỘNG LƯU DỮ LIỆU THÀNH FILE .JSON TRONG THƯ MỤC CỐ ĐỊNH PROJECTS/ ---
+        function autoSaveCurrentTab() {
+            const select = document.getElementById('projectSelectDropdown');
+            if (!select) return;
+            const projName = select.value;
+            if (!projName || projName === "New...") return;
+
+            currentActiveProject = projName;
+            localStorage.setItem('bk_last_active_project', projName);
+
+            const payloadContent = {
+                ngachKenh: document.getElementById('ngachKenhInput')?.value || '',
+                soTopics: document.getElementById('soTopicsSelect')?.value || '',
+                ngonNgu: document.getElementById('ngonNguSelect')?.value || '',
+                kenhThamChieu: document.getElementById('kenhThamChieuInput')?.value || '',
+                focus: document.getElementById('focusSelect')?.value || '',
+                yeuCauBoSung: document.getElementById('yeuCauBoSungInput')?.value || '',
+                topicsHtml: document.getElementById('topicsResultContainer')?.innerHTML || '',
+                topicsHeader: document.getElementById('topicsHeader')?.innerHTML || ''
+            };
+
+            fetch('/api/projects/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    project_name: projName,
+                    content: { [currentTab]: payloadContent }
+                })
+            }).catch(err => console.error("Lỗi lưu file project:", err));
+        }
+
+        document.querySelectorAll('#sidebarNav a').forEach(link => {
+            link.addEventListener('click', () => {
+                autoSaveCurrentTab();
+            });
+        });
+
+        function handleProjectSelect(selectElement) {
+            const selectedProj = selectElement.value;
+            if (selectedProj === "") {
+                openNewProjModalAction();
+            } else if (selectedProj) {
+                currentActiveProject = selectedProj;
+                localStorage.setItem('bk_last_active_project', selectedProj);
+                loadProjectData(selectedProj);
+            }
+        }
+
+        document.getElementById('saveProjectBtn').onclick = () => {
+            const select = document.getElementById('projectSelectDropdown');
+            const currentProj = select.value;
+
+            if (!currentProj || currentProj === "New...") return;
+
+            autoSaveCurrentTab();
+
+            const saveBtn = document.getElementById('saveProjectBtn');
+            const originalHTML = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> Saved File';
+            saveBtn.className = "flex-1 bg-emerald-950/30 border border-emerald-500 text-emerald-400 text-xs py-1.5 rounded font-medium transition flex items-center justify-center gap-1";
+
+            setTimeout(() => {
+                 saveBtn.innerHTML = originalHTML;
+                 saveBtn.className = "flex-1 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium transition flex items-center justify-center gap-1 cursor-pointer";
+            }, 2000);
+        };
+
+        function openRenameModal() {
+            const select = document.getElementById('projectSelectDropdown');
+            const currentProj = select.value;
+            if (!currentProj || currentProj === "New...") return;
+
+            document.getElementById('renameProjectInput').value = currentProj;
+            document.getElementById('renameProjectModal').classList.remove('hidden');
+            document.getElementById('renameProjectModal').classList.add('flex');
+        }
+
+        function closeRenameModal() {
+            document.getElementById('renameProjectModal').classList.remove('flex');
+            document.getElementById('renameProjectModal').classList.add('hidden');
+        }
+
+        function confirmRenameProject() {
+            const select = document.getElementById('projectSelectDropdown');
+            const oldName = select.value;
+            const newName = document.getElementById('renameProjectInput').value.trim();
+
+            if (newName && newName !== oldName) {
+                fetch('/api/projects/load', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ project_name: oldName })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        fetch('/api/projects/save', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ project_name: newName, content: data.data })
+                        }).then(() => {
+                            fetch('/api/projects/delete', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ project_name: oldName })
+                            }).then(() => {
+                                initProjects();
+                                select.value = newName;
+                                currentActiveProject = newName;
+                                localStorage.setItem('bk_last_active_project', newName);
+                            });
+                        });
+                    }
+                });
+            }
+            closeRenameModal();
+        }
+
+        function exportActiveProject() {
+            const select = document.getElementById('projectSelectDropdown');
+            const currentProj = select.value;
+            if (!currentProj || currentProj === "New...") return;
+
+            fetch('/api/projects/load', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ project_name: currentProj })
+            })
+            .then(res => res.json())
+            .then(data => {
+                const jsonStr = JSON.stringify(data.data || {}, null, 4);
+                const blob = new Blob([jsonStr], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${currentProj.replace(/\s+/g, '_')}_config.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        function deleteActiveProject() {
+            const select = document.getElementById('projectSelectDropdown');
+            const currentProj = select.value;
+            if (!currentProj || currentProj === "New...") return;
+
+            fetch('/api/projects/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ project_name: currentProj })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    initProjects();
+                    select.value = "";
+                    currentActiveProject = "";
+                    localStorage.removeItem('bk_last_active_project');
+                    resetForm();
+                }
+            });
+        }
+
+        const syncGlobalToolsBtn = document.getElementById('syncGlobalToolsBtn');
+        const SYNC_BTN_ACTIVE_CLASS = "border border-emerald-500 bg-emerald-950/30 hover:border-emerald-400 text-[11px] px-2 py-1 rounded text-emerald-400 transition flex items-center gap-1.5 cursor-pointer";
+        const SYNC_BTN_DEFAULT_CLASS = "border border-borderDark bg-cardBg hover:border-accentOrange text-[11px] px-2 py-1 rounded text-gray-300 transition flex items-center gap-1.5 cursor-pointer";
+        const SYNC_BTN_ACTIVE_HTML = '<i class="fa-solid fa-check text-[10px]"></i> HH-Media tools';
+        const SYNC_BTN_DEFAULT_HTML = '<i class="fa-solid fa-bars-progress text-accentOrange text-[10px]"></i> HH-Media tools';
+
+        function setSyncButtonActive() {
+            syncGlobalToolsBtn.className = SYNC_BTN_ACTIVE_CLASS;
+            syncGlobalToolsBtn.innerHTML = SYNC_BTN_ACTIVE_HTML;
+            syncGlobalToolsBtn.title = "Đã đồng bộ toàn hệ thống — Nhấn để đồng bộ lại";
+        }
+
+        function setSyncButtonInactive() {
+            syncGlobalToolsBtn.className = SYNC_BTN_DEFAULT_CLASS;
+            syncGlobalToolsBtn.innerHTML = SYNC_BTN_DEFAULT_HTML;
+            syncGlobalToolsBtn.title = "Đồng bộ toàn hệ thống";
+        }
+
+        syncGlobalToolsBtn.onclick = () => {
+            const apiKey = document.getElementById('sidebarApiKeyInput')?.value.trim()
+                || localStorage.getItem('bk_gemini_api_key')
+                || '';
+
+            // Ưu tiên lấy dữ liệu từ PROFILE ĐANG CHỌN (bk_active_profile_data) — đây mới là
+            // nguồn thật của kênh. Chỉ khi chưa chọn profile mới lấy tạm các ô trong modal tạo.
+            let activeProfile = {};
+            try { activeProfile = JSON.parse(localStorage.getItem('bk_active_profile_data') || '{}'); } catch (e) { activeProfile = {}; }
+
+            const globalConfig = {
+                activeProfileId: currentActiveProfileId || activeProfile.id || null,
+                activeProfileName: (activeProfile.ten_kenh
+                    || document.getElementById('activeProfileName').innerText),
+                apiKey: apiKey,
+                prompts: {
+                    char_style: activeProfile.char_style || document.getElementById('newCharStyle')?.value || '',
+                    bg_style: activeProfile.bg_style || document.getElementById('newBgStyle')?.value || '',
+                    scene_style: activeProfile.scene_style || document.getElementById('newSceneStyle')?.value || '',
+                    style_ref: activeProfile.style_ref || document.getElementById('newStyleRef')?.value || ''
+                },
+                context_files: {
+                    style_guide: activeProfile.style_guide || document.getElementById('contentStyleGuide')?.value || '',
+                    dna: activeProfile.dna || document.getElementById('contentDna')?.value || '',
+                    topic_bank: activeProfile.topic_bank || document.getElementById('contentTopicBank')?.value || ''
+                },
+                language: activeProfile.ngon_ngu || '',
+                pov: activeProfile.pov || '',
+                visual: activeProfile.visual || '',
+                ngach: activeProfile.ngach || '',
+                syncedAt: Date.now()
+            };
+
+            // Lưu dữ liệu dùng chung để TẤT CẢ các tool khác (Script Writer, Scene Breakdown,
+            // Asset Prompts, Camera Movement, Thumbnail, Video Metadata, Upload QC...) đọc và tự áp dụng
+            localStorage.setItem('bk_shared_production_data', JSON.stringify(globalConfig));
+            if (apiKey) localStorage.setItem('bk_gemini_api_key', apiKey);
+            localStorage.setItem('bk_tools_synced', '1');
+
+            setSyncButtonActive();
+        };
+
+        // Khôi phục trạng thái "đã đồng bộ" (xanh) khi tải lại trang
+        if (localStorage.getItem('bk_tools_synced') === '1') {
+            setSyncButtonActive();
+        }
+
+        const newProjectModal = document.getElementById('newProjectModal');
+        const openNewProjectBtn = document.getElementById('openNewProjectBtn');
+        const closeNewProjectModal = document.getElementById('closeNewProjectModal');
+        const cancelNewProjectBtn = document.getElementById('cancelNewProjectBtn');
+
+        function openNewProjModalAction() {
+            const activeName = document.getElementById('activeProfileName').innerText;
+            document.getElementById('modalProjectChannelName').innerText = (activeName !== "Chưa chọn profile") ? activeName : "Chưa chọn profile (Mặc định)";
+            
+            const formattedIndex = String(projectCount).padStart(2, '0');
+            const channelPrefix = (activeName !== "Chưa chọn profile") ? activeName : "Project";
+            document.getElementById('newProjectNameInput').value = `${channelPrefix} - Video ${formattedIndex}`;
+
+            newProjectModal.classList.remove('hidden');
+            newProjectModal.classList.add('flex');
+        }
+
+        if (openNewProjectBtn) {
+            openNewProjectBtn.onclick = openNewProjModalAction;
+        }
+        closeNewProjectModal.onclick = () => { newProjectModal.classList.remove('flex'); newProjectModal.classList.add('hidden'); initProjects(); };
+        cancelNewProjectBtn.onclick = () => { newProjectModal.classList.remove('flex'); newProjectModal.classList.add('hidden'); initProjects(); };
+
+        document.getElementById('confirmCreateProjectBtn').onclick = () => {
+            const projectName = document.getElementById('newProjectNameInput').value.trim();
+            if(!projectName) return;
+
+            fetch('/api/projects/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ project_name: projectName, content: {} })
+            }).then(() => {
+                initProjects();
+                const projectSelect = document.getElementById('projectSelectDropdown');
+                projectSelect.value = projectName;
+                currentActiveProject = projectName;
+                localStorage.setItem('bk_last_active_project', projectName);
+
+                projectCount++;
+                newProjectModal.classList.remove('flex');
+                newProjectModal.classList.add('hidden');
+                loadProjectData(projectName);
+            });
+        };
+
+        function handleFileUpload(event, targetId, wrapperId, fileTypeName) {
+            const file = event.target.files[0];
+            if (file) {
+                 const reader = new FileReader();
+                 reader.onload = function(e) {
+                    const targetEl = document.getElementById(targetId);
+                    if(targetEl) targetEl.value = e.target.result;
+                    
+                    const wrapper = document.getElementById(wrapperId);
+                    if (wrapper) {
+                        wrapper.innerHTML = `
+                            <span class="text-emerald-400 font-semibold flex items-center gap-1.5 text-[10px]">
+                                <span><i class="fa-solid fa-check"></i> ${file.name}</span>
+                                <label class="text-gray-400 hover:text-white underline cursor-pointer text-[9px] bg-cardBg px-1.5 py-0.5 rounded border border-borderDark">
+                                    Chọn lại <input type="file" accept=".md,.txt" class="hidden" onchange="handleFileUpload(event, '${targetId}', '${wrapperId}', '${fileTypeName}')">
+                                </label>
+                            </span>
+                        `;
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        // --- XỬ LÝ AUTO EXTRACT QUA API ---
+        const autoExtractBtn = document.getElementById('autoExtractBtn');
+        if(autoExtractBtn) {
+            autoExtractBtn.onclick = () => {
+                const apiKey = document.getElementById('sidebarApiKeyInput')?.value.trim()
+                    || localStorage.getItem('bk_gemini_api_key')
+                    || '';
+
+                const payload = {
+                    style_guide: document.getElementById('contentStyleGuide')?.value || '',
+                    dna: document.getElementById('contentDna')?.value || '',
+                    topic_bank: document.getElementById('contentTopicBank')?.value || '',
+                    api_key: apiKey
+                };
+
+                const btn = document.getElementById('autoExtractBtn');
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang phân tích qua API...';
+                btn.disabled = true;
+                btn.className = "border border-yellow-500 bg-yellow-950/20 text-yellow-400 text-xs font-semibold px-4 py-2.5 rounded transition flex items-center gap-2 cursor-wait w-full justify-center";
+
+                fetch('/api/auto-extract', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === 'success') {
+                        const resData = data.data;
+                        if(resData.ten_kenh) document.getElementById('newTenKenh').value = resData.ten_kenh;
+                        if(resData.ngach) document.getElementById('newNgach').value = resData.ngach;
+                        if(resData.visual) document.getElementById('newVisual').value = resData.visual;
+                        if(resData.pov) document.getElementById('newPov').value = resData.pov;
+                        if(resData.cuc_truc) document.getElementById('newCucTruc').value = resData.cuc_truc;
+                        if(resData.so_phan) document.getElementById('newSoPhan').value = resData.so_phan;
+                        if(resData.target_phut) document.getElementById('newTargetPhut').value = resData.target_phut;
+                        if(resData.char_style) document.getElementById('newCharStyle').value = resData.char_style;
+                        if(resData.bg_style) document.getElementById('newBgStyle').value = resData.bg_style;
+                        if(resData.scene_style) document.getElementById('newSceneStyle').value = resData.scene_style;
+                        if(resData.style_ref) document.getElementById('newStyleRef').value = resData.style_ref;
+
+                        btn.innerHTML = '<i class="fa-solid fa-check"></i> Auto Extract Hoàn Thành';
+                        btn.className = "border border-emerald-500 bg-emerald-950/30 text-emerald-400 text-xs font-semibold px-4 py-2.5 rounded transition flex items-center gap-2 cursor-pointer w-full justify-center shadow-sm";
+                        btn.disabled = false;
+                    } else {
+                        alert("Lỗi Auto Extract: " + (data.message || "Không xác định"));
+                        btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Auto Extract từ 3 file';
+                        btn.className = "border border-accentOrange hover:bg-accentOrange/10 text-accentOrange text-xs font-semibold px-4 py-2.5 rounded transition flex items-center gap-2 cursor-pointer w-full justify-center";
+                        btn.disabled = false;
+                    }
+                })
+                .catch(err => {
+                    alert("Lỗi kết nối Auto Extract: " + err.message);
+                    btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Auto Extract từ 3 file';
+                    btn.className = "border border-accentOrange hover:bg-accentOrange/10 text-accentOrange text-xs font-semibold px-4 py-2.5 rounded transition flex items-center gap-2 cursor-pointer w-full justify-center";
+                    btn.disabled = false;
+                });
+            };
+        }
+
+        // --- XỬ LÝ LƯU PROFILE QUA API ---
+        const saveProfileBtn = document.getElementById('saveProfileBtn');
+        if(saveProfileBtn) {
+            saveProfileBtn.onclick = () => {
+                const payload = {
+                    ten_kenh: document.getElementById('newTenKenh')?.value || '',
+                    ngach: document.getElementById('newNgach')?.value || '',
+                    visual: document.getElementById('newVisual')?.value || '',
+                    ngon_ngu: document.getElementById('newNgonNgu')?.value || '',
+                    pov: document.getElementById('newPov')?.value || '',
+                    char_style: document.getElementById('newCharStyle')?.value || '',
+                    bg_style: document.getElementById('newBgStyle')?.value || '',
+                    scene_style: document.getElementById('newSceneStyle')?.value || '',
+                    style_ref: document.getElementById('newStyleRef')?.value || '',
+                    style_guide: document.getElementById('contentStyleGuide')?.value || '',
+                    dna: document.getElementById('contentDna')?.value || '',
+                    topic_bank: document.getElementById('contentTopicBank')?.value || ''
+                };
+
+                if(!payload.ten_kenh) {
+                    alert("Vui lòng nhập tên kênh!");
+                    return;
+                }
+
+                saveProfileBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu...';
+                saveProfileBtn.disabled = true;
+
+                fetch('/api/profiles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                .then(res => res.json())
+                .then(data => {
+                    saveProfileBtn.innerHTML = 'Lưu Profile';
+                    saveProfileBtn.disabled = false;
+                    if(data.status === 'success') {
+                        createProfileModal.classList.remove('flex');
+                        createProfileModal.classList.add('hidden');
+                        loadProfiles();
+                    } else {
+                        alert("Lỗi lưu profile: " + (data.message || "Không xác định"));
+                    }
+                })
+                .catch(err => {
+                    saveProfileBtn.innerHTML = 'Lưu Profile';
+                    saveProfileBtn.disabled = false;
+                    console.error("Lỗi kết nối:", err);
+                });
+            };
+        }
+
+        // --- XỬ LÝ GENERATE TOPICS QUA GEMINI API ---
+        const generateBtn = document.getElementById('generateBtn');
+        if(generateBtn) {
+            generateBtn.onclick = () => {
+                const currentProj = document.getElementById('projectSelectDropdown').value;
+                
+                fetch('/api/projects/load', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ project_name: currentProj })
+                })
+                .then(res => res.json())
+                .then(projRes => {
+                    let savedProjectData = projRes.status === 'success' ? projRes.data : {};
+
+                    const payload = {
+                        ngach_kenh: document.getElementById('ngachKenhInput')?.value || '',
+                        so_topics: document.getElementById('soTopicsSelect')?.value || '10',
+                        ngon_ngu: document.getElementById('ngonNguSelect')?.value || 'Tiếng Việt',
+                        kenh_tham_chieu: document.getElementById('kenhThamChieuInput')?.value || '',
+                        focus: document.getElementById('focusSelect')?.value || 'Cân bằng',
+                        yeu_cau_bo_sung: document.getElementById('yeuCauBoSungInput')?.value || '',
+                        style_guide: savedProjectData['topic-ideator']?.style_guide || window.activeProfileStyleGuide || "",
+                        dna: savedProjectData['topic-ideator']?.dna || window.activeProfileDna || "",
+                        topic_bank: savedProjectData['topic-ideator']?.topic_bank || window.activeProfileTopicBank || ""
+                    };
+
+                    const container = document.getElementById('topicsResultContainer');
+                    if(!container) return;
+                    container.className = "border border-dashed border-borderDark rounded-xl p-12 text-center text-accentOrange text-sm";
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center justify-center space-y-3 py-4">
+                            <i class="fa-solid fa-spinner fa-spin text-3xl text-accentOrange"></i>
+                            <div class="font-medium text-gray-300">Đang đọc tài liệu gốc và tạo topics qua Gemini API...</div>
+                        </div>
+                    `;
+
+                    fetch('/api/generate-topics', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if(data.status === 'success' && data.data) {
+                            const topics = data.data;
+                            const topicsHeader = document.getElementById('topicsHeader');
+                            if(topicsHeader) topicsHeader.innerHTML = `| TOPICS (${topics.length}) <span class="float-right text-emerald-400 font-normal">✓ ${topics.length} topics generated</span>`;
+                            
+                            container.className = "space-y-4 text-left";
+                            container.innerHTML = topics.map(t => `
+                                <div class="bg-cardBg border border-borderDark rounded-xl p-5 space-y-4 shadow-md">
+                                    <div class="flex justify-between items-center border-b border-borderDark/60 pb-3">
+                                        <div class="text-sm font-bold text-gray-100">#${t.id || '01'} ${t.title_main || t.title}</div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[10px] bg-emerald-950/40 border border-emerald-500/50 text-emerald-400 font-mono px-2 py-0.5 rounded font-bold">CTR: ${t.ctr_badge || 'HIGH'}</span>
+                                            <span class="text-[10px] bg-blue-950/40 border border-blue-500/50 text-blue-400 font-mono px-2 py-0.5 rounded font-bold">${t.easy_badge || 'EASY'}</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="space-y-2">
+                                            <div class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">TITLES (CLICK ĐỂ COPY)</div>
+                                            <div class="space-y-2">
+                                                ${(t.titles_list || []).map(item => `
+                                                    <div onclick="handleCopyTitleClick(this)" data-copy-text="${escapeHtmlAttr(item.title)}" class="title-copy-box bg-inputBg border border-borderDark hover:border-accentOrange/60 p-2.5 rounded cursor-pointer transition group" title="Click để copy">
+                                                        <div class="flex items-center justify-between gap-2">
+                                                            <div class="title-copy-text text-xs text-gray-200 group-hover:text-accentOrange font-medium">${item.title}</div>
+                                                            <i class="fa-solid fa-check text-emerald-400 text-[11px] title-copy-check hidden"></i>
+                                                        </div>
+                                                        <div class="text-[10px] text-gray-500 mt-0.5">${item.formula || ''}</div>
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+
+                                        <div class="space-y-3">
+                                            <div>
+                                                <div class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-1">ANGLE ĐỘC ĐÁO</div>
+                                                <div class="bg-inputBg border border-borderDark p-2.5 rounded text-xs text-gray-300 leading-relaxed">
+                                                    ${t.angle_doc_bao || t.angle || ''}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-1">HOOK SENTENCE</div>
+                                                <div class="bg-inputBg border border-borderDark p-2.5 rounded text-xs text-gray-400 italic leading-relaxed">
+                                                    "${t.hook_sentence || ''}"
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex justify-between items-center pt-2 border-t border-borderDark/40">
+                                        <div class="flex flex-wrap gap-1.5 items-center">
+                                            ${(t.tags || []).map(tag => `<span class="text-[10px] bg-darkBg border border-borderDark text-gray-400 px-2 py-0.5 rounded">${tag}</span>`).join('')}
+                                        </div>
+                                        <button class="bg-accentOrange hover:bg-accentOrangeHover text-white text-xs font-bold px-4 py-1.5 rounded transition cursor-pointer flex items-center gap-1.5 shadow-sm">
+                                            <i class="fa-solid fa-floppy-disk text-[10px]"></i> Save
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('');
+                            autoSaveCurrentTab();
+                        } else {
+                            container.innerHTML = `<div class="text-center text-red-400 text-sm py-8">Lỗi từ API: ${data.message || 'Không thể tạo topics!'}</div>`;
+                        }
+                    })
+                    .catch(err => {
+                        container.innerHTML = `<div class="text-center text-red-400 text-sm py-8">Lỗi kết nối: ${err.message}</div>`;
+                    });
+                });
+            };
+        }
+
+        function loadProfiles() {
+          fetch('/api/profiles')
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    const container = document.getElementById('profileListContainer');
+                    if(!container) return;
+                    if(data.data.length === 0) {
+                        container.innerHTML = '<div class="text-center text-gray-500 text-sm py-8">Chưa có profile nào. Tạo profile mới để bắt đầu.</div>';
+                        return;
+                    }
+                    container.innerHTML = data.data.map(p => {
+                        const isSelected = p.id === currentActiveProfileId;
+                        return `
+                            <div class="bg-cardBg border ${isSelected ? 'border-emerald-500 bg-emerald-950/10' : 'border-borderDark'} p-3.5 rounded-lg flex flex-col gap-2 transition">
+                                <div class="flex justify-between items-center">
+                                    <div class="cursor-pointer flex-1" onclick="selectProfile('${p.id}', '${p.ten_kenh}')">
+                                        <div class="text-sm font-bold text-gray-200">${p.ten_kenh} (${p.id})</div>
+                                        <div class="text-xs text-gray-400">Ngách: ${p.ngach || 'Chưa phân loại'}</div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        ${isSelected ? 
+                                            '<span class="text-xs bg-emerald-500 text-white font-semibold px-3 py-1 rounded shadow-sm">✓ Đang chọn</span>' : 
+                                            `<button class="text-xs text-accentOrange border border-accentOrange/40 hover:bg-accentOrange/10 px-3 py-1 rounded transition cursor-pointer" onclick="selectProfile('${p.id}', '${p.ten_kenh}')">Chọn</button>`
+                                        }
+                                        <button class="text-xs text-red-400 hover:text-red-300 p-1.5 transition ml-1 cursor-pointer" title="Xóa Profile" onclick="showDeleteConfirm('${p.id}', event)">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="delete-box-${p.id}" class="hidden pt-2 border-t border-borderDark/60 flex items-center justify-between text-xs">
+                                    <span class="text-amber-400 font-medium"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Bạn có chắc chắn muốn xóa profile này không?</span>
+                                    <div class="flex gap-2">
+                                        <button onclick="executeDelete('${p.id}')" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded font-medium transition cursor-pointer">Xóa</button>
+                                        <button onclick="hideDeleteConfirm('${p.id}')" class="bg-cardBg border border-borderDark hover:bg-borderDark text-gray-300 px-3 py-1 rounded transition cursor-pointer">Hủy</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            });
+      }
+
+      function showDeleteConfirm(id, event) {
+        event.stopPropagation();
+        const box = document.getElementById(`delete-box-${id}`);
+        if(box) box.classList.remove('hidden');
+      }
+
+      function hideDeleteConfirm(id) {
+        const box = document.getElementById(`delete-box-${id}`);
+        if(box) box.classList.add('hidden');
+      }
+
+      function executeDelete(id) {
+        const box = document.getElementById(`delete-box-${id}`);
+        const deleteBtn = box ? box.querySelector('button.bg-red-600') : null;
+        const originalBtnHTML = deleteBtn ? deleteBtn.innerHTML : '';
+
+        if (deleteBtn) {
+            deleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            deleteBtn.disabled = true;
+        }
+
+        fetch(`/api/profiles/${id}`, { method: 'DELETE' })
+          .then(res => {
+              // Đọc body dù request thành công hay thất bại để lấy thông báo lỗi cụ thể
+              return res.json()
+                .catch(() => ({}))
+                .then(data => {
+                    if (!res.ok && !data.status) {
+                        throw new Error(`Server trả về lỗi ${res.status}`);
+                    }
+                    return data;
+                });
+          })
+          .then(data => {
+              if(data.status === 'success') {
+                  if(currentActiveProfileId === id) {
+                      currentActiveProfileId = null;
+                      localStorage.removeItem('bk_active_profile_id');
+                      localStorage.removeItem('bk_active_profile_name');
+                      localStorage.removeItem('bk_active_profile_data');
+                      document.getElementById('activeProfileId').innerText = '061';
+                      const nameEl = document.getElementById('activeProfileName');
+                      nameEl.innerText = 'Chưa chọn profile';
+                      nameEl.className = "text-sm text-gray-400 italic";
+                      resetContextFileBoxes();
+                  }
+                  loadProfiles();
+              } else {
+                  alert("Không thể xóa profile: " + (data.message || "Lỗi không xác định từ server."));
+                  if (deleteBtn) { deleteBtn.innerHTML = originalBtnHTML; deleteBtn.disabled = false; }
+              }
+          })
+          .catch(err => {
+              console.error('Lỗi khi xóa:', err);
+              alert("Không thể xóa profile (lỗi kết nối/server): " + err.message);
+              if (deleteBtn) { deleteBtn.innerHTML = originalBtnHTML; deleteBtn.disabled = false; }
+          });
+      }
+
+      function selectProfile(id, name) {
+        currentActiveProfileId = id;
+        localStorage.setItem('bk_active_profile_id', id);
+        localStorage.setItem('bk_active_profile_name', name);
+
+        // Đổi profile => dữ liệu đã đồng bộ trước đó không còn khớp, tắt trạng thái "đã đồng bộ"
+        localStorage.removeItem('bk_tools_synced');
+        if (typeof setSyncButtonInactive === 'function') setSyncButtonInactive();
+
+        document.getElementById('activeProfileId').innerText = id;
+        const nameEl = document.getElementById('activeProfileName');
+        nameEl.innerText = name;
+        nameEl.className = "text-sm text-emerald-400 font-semibold italic";
+        profileModal.classList.remove('flex');
+        profileModal.classList.add('hidden');
+
+        setAllFilesSuccess();
+
+        fetch('/api/profiles')
+          .then(res => res.json())
+          .then(resData => {
+              if(resData.status === 'success' && resData.data) {
+                  const matched = resData.data.find(p => String(p.id) === String(id));
+                  if(matched) {
+                      window.activeProfileStyleGuide = matched.style_guide || "";
+                      window.activeProfileDna = matched.dna || "";
+                      window.activeProfileTopicBank = matched.topic_bank || "";
+                      localStorage.setItem('bk_active_profile_data', JSON.stringify(matched));
+                  }
+              }
+          });
+      }
+
+      function setAllFilesSuccess() {
+        const boxes = [
+            { id: 'fileBoxStyleGuide', name: 'STYLE GUIDE' },
+            { id: 'fileBoxDna', name: 'DNA KÊNH' },
+            { id: 'fileBoxTopicBank', name: 'TOPICS ĐÃ LÀM' }
+        ];
+
+        boxes.forEach(item => {
+            const box = document.getElementById(item.id);
+            if(box) {
+                box.className = "bg-emerald-950/20 border border-emerald-500 rounded-lg p-6 flex flex-col items-center justify-center text-center transition group shadow-sm";
+                box.innerHTML = `
+                    <i class="fa-solid fa-circle-check text-2xl text-emerald-400 mb-2"></i>
+                    <span class="text-xs font-bold tracking-wider text-emerald-300">${item.name}</span>
+                    <span class="text-[10px] text-emerald-500 mt-0.5">Đã liên kết dữ liệu</span>
+                `;
+            }
+        });
+      }
+
+      function resetContextFileBoxes() {
+        const bg1 = document.getElementById('fileBoxStyleGuide');
+        if(bg1) { bg1.className = "bg-cardBg border border-borderDark rounded-lg p-6 flex flex-col items-center justify-center text-center transition group"; bg1.innerHTML = `<i class="fa-solid fa-file-lines text-2xl text-amber-500 mb-2"></i><span class="text-xs font-bold tracking-wider text-gray-300">STYLE GUIDE</span>`; }
+
+        const bg2 = document.getElementById('fileBoxDna');
+        if(bg2) { bg2.className = "bg-cardBg border border-borderDark rounded-lg p-6 flex flex-col items-center justify-center text-center transition group"; bg2.innerHTML = `<i class="fa-solid fa-dna text-2xl text-cyan-400 mb-2"></i><span class="text-xs font-bold tracking-wider text-gray-300">DNA KÊNH</span>`; }
+
+        const bg3 = document.getElementById('fileBoxTopicBank');
+        if(bg3) { bg3.className = "bg-cardBg border border-borderDark rounded-lg p-6 flex flex-col items-center justify-center text-center transition group"; bg3.innerHTML = `<i class="fa-solid fa-file-pen text-2xl text-gray-400 mb-2"></i><span class="text-xs font-bold tracking-wider text-gray-300">TOPICS ĐÃ LÀM</span>`; }
+      }
+
+      const sidebarSaveKeyBtn = document.getElementById('sidebarSaveKeyBtn');
+      if(sidebarSaveKeyBtn) {
+        sidebarSaveKeyBtn.onclick = () => {
+            const apiKey = document.getElementById('sidebarApiKeyInput').value.trim();
+            if(!apiKey) return;
+
+            sidebarSaveKeyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            sidebarSaveKeyBtn.disabled = true;
+            sidebarSaveKeyBtn.className = "bg-orange-400 text-white text-xs px-3 py-1.5 rounded transition cursor-wait font-bold flex items-center justify-center min-w-[50px]";
+
+            fetch('/api/save-gemini-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ api_key: apiKey })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    localStorage.setItem('bk_gemini_api_key', apiKey);
+
+                    const statusEl = document.getElementById('apiKeyStatus');
+                    statusEl.className = "text-emerald-400 font-semibold";
+                    statusEl.innerText = "✔ Đã cấu hình";
+
+                    sidebarSaveKeyBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
+                    sidebarSaveKeyBtn.className = "bg-emerald-600 text-white text-xs px-3 py-1.5 rounded transition font-bold flex items-center justify-center min-w-[50px]";
+
+                    setTimeout(() => {
+                        sidebarSaveKeyBtn.innerHTML = 'Lưu';
+                        sidebarSaveKeyBtn.className = "bg-accentOrange hover:bg-accentOrangeHover text-white text-xs px-3 py-1.5 rounded transition cursor-pointer font-bold flex items-center justify-center min-w-[50px]";
+                        sidebarSaveKeyBtn.disabled = false;
+                    }, 2000);
+                } else {
+                    sidebarSaveKeyBtn.innerHTML = 'Lưu';
+                    sidebarSaveKeyBtn.className = "bg-accentOrange hover:bg-accentOrangeHover text-white text-xs px-3 py-1.5 rounded transition cursor-pointer font-bold flex items-center justify-center min-w-[50px]";
+                    sidebarSaveKeyBtn.disabled = false;
+                }
+            })
+            .catch(err => {
+                localStorage.setItem('bk_gemini_api_key', apiKey);
+                const statusEl = document.getElementById('apiKeyStatus');
+                statusEl.className = "text-emerald-400 font-semibold";
+                statusEl.innerText = "✔ Đã cấu hình";
+
+                sidebarSaveKeyBtn.innerHTML = 'Lưu';
+                sidebarSaveKeyBtn.className = "bg-accentOrange hover:bg-accentOrangeHover text-white text-xs px-3 py-1.5 rounded transition cursor-pointer font-bold flex items-center justify-center min-w-[50px]";
+                sidebarSaveKeyBtn.disabled = false;
+            });
+        };
+      }
+
+      window.addEventListener('DOMContentLoaded', () => {
+          const savedId = localStorage.getItem('bk_active_profile_id');
+          const savedName = localStorage.getItem('bk_active_profile_name');
+          const savedData = localStorage.getItem('bk_active_profile_data');
+
+          if (savedId && savedName) {
+              currentActiveProfileId = savedId;
+              document.getElementById('activeProfileId').innerText = savedId;
+              const nameEl = document.getElementById('activeProfileName');
+              nameEl.innerText = savedName;
+              nameEl.className = "text-sm text-emerald-400 font-semibold italic";
+              setAllFilesSuccess();
+
+              if (savedData) {
+                  try {
+                      const matched = JSON.parse(savedData);
+                      window.activeProfileStyleGuide = matched.style_guide || "";
+                      window.activeProfileDna = matched.dna || "";
+                      window.activeProfileTopicBank = matched.topic_bank || "";
+                  } catch(e) {}
+              }
+          }
+      });
+
+      function loadProjectData(projName) {
+        if (!projName || projName === "New...") return;
+        
+        fetch('/api/projects/load', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ project_name: projName })
+        })
+        .then(res => res.json())
+        .then(projRes => {
+            if (projRes.status === 'success') {
+                const allData = projRes.data;
+                const d = allData[currentTab];
+                if (d) {
+                    if (d.ngachKenh && document.getElementById('ngachKenhInput')) document.getElementById('ngachKenhInput').value = d.ngachKenh;
+                    if (d.soTopics && document.getElementById('soTopicsSelect')) document.getElementById('soTopicsSelect').value = d.soTopics;
+                    if (d.ngonNgu && document.getElementById('ngonNguSelect')) document.getElementById('ngonNguSelect').value = d.ngonNgu;
+                    if (d.kenhThamChieu && document.getElementById('kenhThamChieuInput')) document.getElementById('kenhThamChieuInput').value = d.kenhThamChieu;
+                    if (d.focus && document.getElementById('focusSelect')) document.getElementById('focusSelect').value = d.focus;
+                    if (d.yeuCauBoSung && document.getElementById('yeuCauBoSungInput')) document.getElementById('yeuCauBoSungInput').value = d.yeuCauBoSung;
+                    
+                    if (d.topicsHtml && document.getElementById('topicsResultContainer')) {
+                        document.getElementById('topicsResultContainer').className = "space-y-4 text-left";
+                        document.getElementById('topicsResultContainer').innerHTML = d.topicsHtml;
+                    }
+                    if (d.topicsHeader && document.getElementById('topicsHeader')) {
+                        document.getElementById('topicsHeader').innerHTML = d.topicsHeader;
+                    }
+                } else {
+                    document.getElementById('topicsResultContainer').className = "border border-dashed border-borderDark rounded-xl p-12 text-center text-gray-600 text-sm";
+                    document.getElementById('topicsResultContainer').innerHTML = 'Chưa có topic nào được tạo. Hãy nhấn "Generate Topics" để bắt đầu.';
+                    document.getElementById('topicsHeader').innerHTML = '| TOPICS (0)';
+                }
+            }
+        });
+      }
+
+      function resetForm() {
+          document.getElementById('ngachKenhInput').value = '';
+          document.getElementById('kenhThamChieuInput').value = '';
+          document.getElementById('yeuCauBoSungInput').value = '';
+          document.getElementById('topicsResultContainer').className = "border border-dashed border-borderDark rounded-xl p-12 text-center text-gray-600 text-sm";
+          document.getElementById('topicsResultContainer').innerHTML = 'Chưa có topic nào được tạo. Hãy nhấn "Generate Topics" để bắt đầu.';
+          document.getElementById('topicsHeader').innerHTML = '| TOPICS (0)';
+          autoSaveCurrentTab();
+      }
+    </script>
+</body>
+</html>

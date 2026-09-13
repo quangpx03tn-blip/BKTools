@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BK Tools - Camera & Shot Designer (v2)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        darkBg: '#0f1015',
+                        sidebarBg: '#14161f',
+                        cardBg: '#1b1e29',
+                        inputBg: '#14161f',
+                        accentOrange: '#ff7700',
+                        accentOrangeHover: '#e56b00',
+                        borderDark: '#2a2e3d'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f1015; }
+        ::-webkit-scrollbar-thumb { background: #2a2e3d; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #ff7700; }
+
+        /* Màu mã hóa theo cỡ cảnh - dùng chung cho timeline + badge + bảng */
+        .sz-ews { background:#1e3a5f; color:#7dd3fc; }
+        .sz-ws  { background:#164e63; color:#67e8f9; }
+        .sz-ms  { background:#134e4a; color:#5eead4; }
+        .sz-cu  { background:#78350f; color:#fbbf24; }
+        .sz-ecu { background:#7f1d1d; color:#fca5a5; }
+
+        .tl-ews { background:#38bdf8; } .tl-ws { background:#22d3ee; }
+        .tl-ms  { background:#2dd4bf; } .tl-cu { background:#f59e0b; }
+        .tl-ecu { background:#ef4444; }
+
+        tr.row-active { background: rgba(255,119,0,.07); box-shadow: inset 3px 0 0 #ff7700; }
+        tr.row-warn td:first-child { box-shadow: inset 3px 0 0 #ef4444; }
+        .cell-input { background:transparent; border:1px solid transparent; }
+        .cell-input:hover { border-color:#2a2e3d; }
+        .cell-input:focus { border-color:#ff7700; outline:none; background:#0f1015; }
+        select.cell-sel { background:#0f1015; border:1px solid #2a2e3d; }
+        select.cell-sel:focus { border-color:#ff7700; outline:none; }
+
+        /* --- AI ENGINE: chọn model + chế độ phân tích --- */
+        .model-card {
+            border: 1px solid #2a2e3d; background:#0f1015; border-radius: 10px;
+            padding: 10px 12px; cursor: pointer; transition: .15s;
+        }
+        .model-card:hover { border-color:#3a4152; }
+        .model-card.active { border-color:#ff7700; background: rgba(255,119,0,.06); box-shadow: 0 0 0 1px rgba(255,119,0,.25) inset; }
+        .model-badge {
+            font-size: 9px; font-weight: 700; letter-spacing:.04em; padding: 1px 6px;
+            border-radius: 999px; text-transform: uppercase;
+        }
+        .badge-fast { background: rgba(34,211,238,.12); color:#22d3ee; }
+        .badge-balanced { background: rgba(52,211,153,.12); color:#34d399; }
+        .badge-deep { background: rgba(168,85,247,.14); color:#c084fc; }
+
+        .depth-tab {
+            flex:1; text-align:center; padding: 9px 8px; border-radius: 8px; cursor:pointer;
+            border: 1px solid #2a2e3d; background:#0f1015; transition:.15s;
+        }
+        .depth-tab:hover { border-color:#3a4152; }
+        .depth-tab.active { border-color:#ff7700; background: rgba(255,119,0,.08); }
+        .depth-tab.active .depth-title { color:#ff9d4d; }
+        .depth-title { font-size:12px; font-weight:700; color:#e5e7eb; }
+        .depth-sub { font-size:10px; color:#7c8296; margin-top:1px; }
+
+        @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.35} }
+        .live-dot { animation: pulse-dot 1.6s ease-in-out infinite; }
+    </style>
+</head>
+<body class="bg-darkBg text-gray-200 font-sans antialiased h-screen overflow-hidden flex m-0 p-0">
+
+<!-- ═══════════ SIDEBAR (giữ nguyên chuẩn hệ thống) ═══════════ -->
+<aside class="w-64 bg-sidebarBg border-r border-borderDark flex flex-col justify-between shrink-0 select-none h-full">
+    <div>
+        <div class="p-4 border-b border-borderDark">
+            <div class="text-accentOrange font-extrabold tracking-wider text-lg">BK TOOLS</div>
+            <div class="text-[10px] text-gray-400 tracking-widest uppercase">PRODUCTION SUITE</div>
+        </div>
+        <div class="p-4 border-b border-borderDark space-y-3">
+            <div class="flex justify-between items-center">
+                <label class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Project</label>
+                <button id="syncGlobalToolsBtn" class="border border-borderDark bg-cardBg hover:border-accentOrange text-[11px] px-2 py-1 rounded text-gray-300 transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-bars-progress text-accentOrange text-[10px]"></i> HH-Media tools
+                </button>
+            </div>
+            <div class="relative">
+                <select id="projectSelectDropdown" onchange="handleProjectSelect(this)" class="w-full bg-inputBg border border-borderDark text-sm rounded px-3 py-2 appearance-none focus:outline-none focus:border-accentOrange text-gray-300 cursor-pointer">
+                    <option>Default_Project</option>
+                </select>
+                <i class="fa-solid fa-chevron-down absolute right-3 top-3 text-xs text-gray-400 pointer-events-none"></i>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="createNewProject()" class="flex-1 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium transition flex items-center justify-center gap-1"><i class="fa-solid fa-plus text-[10px]"></i> New</button>
+                <button onclick="manualSaveProject()" class="flex-1 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium transition flex items-center justify-center gap-1"><i class="fa-solid fa-floppy-disk text-[10px]"></i> Save</button>
+                <button onclick="exportProjectJSON()" class="px-3 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium transition" title="Xuất JSON">...</button>
+            </div>
+        </div>
+        <div class="px-4 py-3 border-b border-borderDark cursor-pointer hover:bg-cardBg/50 transition">
+            <div class="flex justify-between items-center text-xs mb-1">
+                <span class="text-gray-400 uppercase tracking-wider">Active Profile</span>
+                <span id="activeProfileId" class="text-gray-500 font-mono">1f55</span>
+            </div>
+            <div id="activeProfileName" class="text-sm text-emerald-400 font-semibold">미래산업 리포트</div>
+        </div>
+        <nav class="py-2 space-y-1">
+            <a href="/" class="flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 text-sm transition"><span class="w-6 text-xs text-gray-500">0</span> Topic Ideator</a>
+            <a href="/script_writer.html" class="flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 text-sm transition"><span class="w-6 text-xs text-gray-500">1</span> Script Writer</a>
+            <a href="/scene_breakdown.html" class="flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 text-sm transition"><span class="w-6 text-xs text-gray-500">2</span> Scene Breakdown</a>
+            <a href="/asset_prompts.html" class="flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 text-sm transition"><span class="w-6 text-xs text-gray-500">3</span> Asset Prompts</a>
+            <a href="/camera_movement.html" class="flex items-center px-4 py-2.5 bg-cardBg text-accentOrange border-r-4 border-accentOrange text-sm font-medium transition"><span class="w-6 text-xs text-gray-500">4</span> Camera Movement</a>
+            <a href="/thumbnail.html" class="flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 text-sm transition"><span class="w-6 text-xs text-gray-500">5</span> Thumbnail</a>
+            <a href="/video_metadata.html" class="flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 text-sm transition"><span class="w-6 text-xs text-gray-500">6</span> Video Metadata</a>
+            <a href="/upload_qc.html" class="flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 text-sm transition"><span class="w-6 text-xs text-gray-500">7</span> Upload QC</a>
+        </nav>
+    </div>
+    <div class="p-4 border-t border-borderDark space-y-3">
+        <div>
+            <label class="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">GEMINI API KEY</label>
+            <div class="flex gap-1">
+                <input type="password" id="sidebarApiKeyInput" value="xxxxxxxxxxxxxxxx" class="w-full bg-inputBg border border-borderDark rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-accentOrange font-mono">
+                <button class="bg-accentOrange hover:bg-accentOrangeHover text-white text-xs px-3 py-1.5 rounded font-bold">Lưu</button>
+            </div>
+        </div>
+        <div class="flex items-center justify-between text-[11px]">
+            <span class="text-gray-500">Trạng thái:</span>
+            <span id="apiKeyStatus" class="text-emerald-400 font-medium">✔ Đã cấu hình</span>
+        </div>
+    </div>
+</aside>
+
+<!-- ═══════════ MAIN ═══════════ -->
+<main class="flex-1 flex flex-col h-screen overflow-hidden">
+
+    <!-- HEADER -->
+    <div class="flex justify-between items-center border-b border-borderDark px-6 py-3 shrink-0">
+        <div>
+            <h1 class="text-lg font-bold text-gray-100">Camera &amp; Shot Designer</h1>
+            <p class="text-xs text-gray-400 mt-0.5">Phân tích SRT → thiết kế cỡ cảnh, chuyển động máy &amp; nhịp dựng theo ngữ cảnh và profile kênh</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <span id="saveBadge" class="text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-full"><i class="fa-solid fa-circle text-[6px] align-middle"></i> Đã lưu ngầm</span>
+            <span class="bg-cardBg border border-borderDark text-xs px-3 py-1 rounded text-orange-400 font-semibold font-mono">Tool 4</span>
+        </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+
+        <!-- ① STAT STRIP -->
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-3 shrink-0">
+            <div class="bg-cardBg border border-borderDark rounded-xl p-3">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Tổng shot</div>
+                <div id="mTotal" class="text-xl font-bold text-slate-100 font-mono">0</div>
+            </div>
+            <div class="bg-cardBg border border-borderDark rounded-xl p-3">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Thời lượng</div>
+                <div id="mDuration" class="text-xl font-bold text-amber-400 font-mono">0:00</div>
+            </div>
+            <div class="bg-cardBg border border-borderDark rounded-xl p-3">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Nhịp TB</div>
+                <div class="text-xl font-bold text-cyan-400 font-mono"><span id="mPace">0</span><span class="text-xs text-slate-500">s</span></div>
+            </div>
+            <div class="bg-cardBg border border-borderDark rounded-xl p-3">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Đa dạng góc</div>
+                <div class="text-xl font-bold font-mono"><span id="mDiversity" class="text-emerald-400">0</span><span class="text-xs text-slate-500">%</span></div>
+            </div>
+            <div class="bg-cardBg border border-borderDark rounded-xl p-3">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Shot quá dài</div>
+                <div id="mTooLong" class="text-xl font-bold text-red-400 font-mono">0</div>
+            </div>
+            <div class="bg-cardBg border border-borderDark rounded-xl p-3">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Cần review</div>
+                <div id="mWarn" class="text-xl font-bold text-orange-400 font-mono">0</div>
+            </div>
+        </div>
+
+        <!-- ② SOURCE + CONFIG (thu gọn được) -->
+        <div class="bg-cardBg border border-borderDark rounded-xl shrink-0">
+            <button onclick="togglePanel('setupPanel', this)" class="w-full flex justify-between items-center px-4 py-2.5 text-xs">
+                <span class="text-orange-400 font-bold uppercase tracking-wider">| Nguồn kịch bản &amp; Quy tắc dựng</span>
+                <i class="fa-solid fa-chevron-up text-accentOrange text-xs transition-transform"></i>
+            </button>
+            <div id="setupPanel" class="px-4 pb-4 border-t border-borderDark pt-3 grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+                <!-- Nguồn -->
+                <div class="flex flex-col">
+                    <div class="flex gap-1 mb-2 text-xs">
+                        <button onclick="srcTab('paste',this)" class="src-tab px-3 py-1.5 rounded-t border-b-2 border-accentOrange text-accentOrange font-medium">Dán SRT</button>
+                        <button onclick="srcTab('file',this)" class="src-tab px-3 py-1.5 rounded-t border-b-2 border-transparent text-slate-400 hover:text-slate-200">Tải file</button>
+                        <button onclick="srcTab('tool2',this)" class="src-tab px-3 py-1.5 rounded-t border-b-2 border-transparent text-slate-400 hover:text-slate-200">
+                            <i class="fa-solid fa-link text-[10px]"></i> Lấy từ Tool 2
+                        </button>
+                    </div>
+                    <div id="src-paste">
+                        <textarea id="srtInput" class="w-full h-40 bg-darkBg border border-borderDark rounded-lg p-3 font-mono text-[11px] text-slate-300 resize-none focus:outline-none focus:border-accentOrange leading-relaxed">1
+00:00:00,000 --> 00:00:09,599
+2026년, 반도체 산업은 완전히 새로운 국면에 접어들었습니다.
+
+2
+00:00:09,600 --> 00:00:13,200
+엔비디아의 시가총액이 사상 처음으로 4조 달러를 돌파했습니다.</textarea>
+                    </div>
+                    <div id="src-file" class="hidden">
+                        <div class="h-40 border-2 border-dashed border-borderDark rounded-lg flex flex-col items-center justify-center text-slate-400 hover:border-accentOrange transition cursor-pointer">
+                            <i class="fa-solid fa-file-arrow-up text-2xl mb-2 text-accentOrange"></i>
+                            <div class="text-xs">Kéo thả file <span class="font-mono text-slate-300">.srt</span> vào đây</div>
+                            <div class="text-[10px] text-slate-500 mt-1">hoặc bấm để chọn tệp</div>
+                        </div>
+                    </div>
+                    <div id="src-tool2" class="hidden">
+                        <div class="h-40 bg-darkBg border border-borderDark rounded-lg p-3 text-xs text-slate-300 flex flex-col justify-center gap-3">
+                            <div id="t2Status" class="flex items-center gap-2 text-slate-400">
+                                <i class="fa-solid fa-circle-notch fa-spin"></i> Đang dò dữ liệu Tool 2…
+                            </div>
+                            <div class="text-[11px] text-slate-400 leading-relaxed">Kéo thẳng timecode + thoại + character + background sang đây, giữ nguyên ID scene để Tool 3 và Upload QC khớp file ảnh.</div>
+                            <button id="t2ImportBtn" onclick="importFromTool2()" disabled
+                                class="self-start bg-accentOrange hover:bg-accentOrangeHover disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs px-3 py-1.5 rounded font-semibold transition">
+                                <i class="fa-solid fa-download text-[10px]"></i> <span id="t2BtnLabel">Nhập scene</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quy tắc -->
+                <div class="grid grid-cols-2 gap-3 content-start">
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Thể loại / Nhịp</label>
+                        <select id="cfgGenre" class="w-full bg-darkBg border border-borderDark rounded px-2 py-1.5 text-xs focus:outline-none focus:border-accentOrange">
+                            <option value="documentary">Documentary – Điềm đạm</option>
+                            <option value="tech_report" selected>Tech Report – Nhịp nhanh</option>
+                            <option value="drama">Drama – Cảm xúc</option>
+                            <option value="explainer">Explainer – Cân bằng</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Chuyển cảnh mặc định</label>
+                        <select id="cfgTransition" class="w-full bg-darkBg border border-borderDark rounded px-2 py-1.5 text-xs focus:outline-none focus:border-accentOrange">
+                            <option selected>Smooth Cut</option><option>Hard Cut</option><option>Fade</option><option>Match Cut</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Định hướng VFX</label>
+                        <select id="cfgVfx" class="w-full bg-darkBg border border-borderDark rounded px-2 py-1.5 text-xs focus:outline-none focus:border-accentOrange">
+                            <option selected>Cinematic Depth</option><option>Flat / Clean</option><option>High Contrast</option><option>Motion Graphic</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Max giây / shot</label>
+                        <input id="cfgMaxSec" type="number" value="6" class="w-full bg-darkBg border border-borderDark rounded px-2 py-1.5 text-xs focus:outline-none focus:border-accentOrange">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-1.5 font-semibold">Ràng buộc thông minh</label>
+                        <div class="flex flex-wrap gap-3 text-[11px] text-slate-300">
+                            <label class="flex items-center gap-1.5 cursor-pointer"><input id="ruleSplitLong" type="checkbox" checked class="accent-orange-500"> Tự tách shot &gt; max giây</label>
+                            <label class="flex items-center gap-1.5 cursor-pointer"><input id="ruleNoRepeat" type="checkbox" checked class="accent-orange-500"> Chống lặp cỡ cảnh liền kề</label>
+                            <label class="flex items-center gap-1.5 cursor-pointer"><input id="ruleOpenWide" type="checkbox" checked class="accent-orange-500"> Mở đoạn bằng Wide</label>
+                            <label class="flex items-center gap-1.5 cursor-pointer"><input id="ruleAxis180" type="checkbox" class="accent-orange-500"> Giữ trục 180°</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ★ AI ENGINE: chọn model + chế độ phân tích -->
+                <div class="col-span-1 lg:col-span-2 border-t border-borderDark pt-3.5 mt-1">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+                            <i class="fa-solid fa-microchip text-accentOrange"></i> AI Engine — Model &amp; Chế độ phân tích
+                        </label>
+                        <span id="engineEstimate" class="text-[10px] text-slate-500 font-mono">~24 shot · ước tính 8–12s</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <!-- Chọn model -->
+                        <div>
+                            <div class="text-[10px] text-slate-500 mb-1.5 font-medium">Model Gemini</div>
+                            <div id="modelPicker" class="space-y-1.5">
+                                <div class="model-card" data-model="gemini-2.0-flash-exp" onclick="selectModel(this)">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-semibold text-slate-200">Flash Exp</span>
+                                        <span class="model-badge badge-fast">Nhanh nhất</span>
+                                    </div>
+                                    <div class="text-[10px] text-slate-500 mt-0.5">Rẻ, tốc độ cao — hợp kịch bản ngắn, duyệt sơ bộ.</div>
+                                </div>
+                                <div class="model-card active" data-model="gemini-2.5-flash" onclick="selectModel(this)">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-semibold text-slate-200">2.5 Flash</span>
+                                        <span class="model-badge badge-balanced">Khuyên dùng</span>
+                                    </div>
+                                    <div class="text-[10px] text-slate-500 mt-0.5">Cân bằng tốc độ / chất lượng — mặc định cho hầu hết video.</div>
+                                </div>
+                                <div class="model-card" data-model="gemini-2.5-pro" onclick="selectModel(this)">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-semibold text-slate-200">2.5 Pro</span>
+                                        <span class="model-badge badge-deep">Suy luận sâu</span>
+                                    </div>
+                                    <div class="text-[10px] text-slate-500 mt-0.5">Hiểu ẩn ý, đối chiếu ngữ cảnh nhiều shot — kịch bản phức tạp.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chế độ phân tích -->
+                        <div>
+                            <div class="text-[10px] text-slate-500 mb-1.5 font-medium">Chế độ phân tích</div>
+                            <div id="depthPicker" class="flex gap-2">
+                                <div class="depth-tab" data-depth="fast" onclick="selectDepth(this)">
+                                    <div class="depth-title">⚡ Nhanh</div>
+                                    <div class="depth-sub">1 lượt / lô lớn</div>
+                                </div>
+                                <div class="depth-tab active" data-depth="balanced" onclick="selectDepth(this)">
+                                    <div class="depth-title">⚖️ Cân bằng</div>
+                                    <div class="depth-sub">Đối chiếu liền kề</div>
+                                </div>
+                                <div class="depth-tab" data-depth="deep" onclick="selectDepth(this)">
+                                    <div class="depth-title">🧠 Chuyên sâu</div>
+                                    <div class="depth-sub">Toàn mạch + review 2 lượt</div>
+                                </div>
+                            </div>
+                            <div id="depthDesc" class="text-[10px] text-slate-500 mt-1.5 leading-relaxed">
+                                Phân lô nhỏ, đối chiếu ngữ cảnh 2 shot liền kề để tránh lặp cỡ cảnh. Cân bằng giữa tốc độ và độ chính xác — phù hợp phần lớn video.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 pt-3">
+                        <button id="btnAnalyze" onclick="runAnalysis()" class="flex-1 bg-accentOrange hover:bg-accentOrangeHover text-white text-sm py-2.5 rounded-lg font-bold transition flex items-center justify-center gap-2">
+                            <i id="btnAnalyzeIcon" class="fa-solid fa-wand-magic-sparkles"></i> <span id="btnAnalyzeLabel">Phân tích &amp; Thiết kế góc máy</span>
+                        </button>
+                        <button onclick="recalcMetrics()" class="px-4 bg-cardBg border border-borderDark hover:border-accentOrange text-xs rounded-lg transition" title="Chỉ tính lại nhịp, giữ nguyên chỉnh tay">
+                            <i class="fa-solid fa-arrows-rotate text-accentOrange"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ③ TIMELINE RHYTHM BAR -->
+        <div class="bg-cardBg border border-borderDark rounded-xl p-4 shrink-0">
+            <div class="flex justify-between items-center mb-2.5">
+                <span class="text-xs text-orange-400 font-bold uppercase tracking-wider">| Nhịp hình ảnh</span>
+                <div class="flex gap-3 text-[10px] text-slate-400">
+                    <span class="flex items-center gap-1"><i class="w-2.5 h-2.5 rounded-sm tl-ews inline-block"></i>EWS</span>
+                    <span class="flex items-center gap-1"><i class="w-2.5 h-2.5 rounded-sm tl-ws inline-block"></i>WS</span>
+                    <span class="flex items-center gap-1"><i class="w-2.5 h-2.5 rounded-sm tl-ms inline-block"></i>MS</span>
+                    <span class="flex items-center gap-1"><i class="w-2.5 h-2.5 rounded-sm tl-cu inline-block"></i>CU</span>
+                    <span class="flex items-center gap-1"><i class="w-2.5 h-2.5 rounded-sm tl-ecu inline-block"></i>ECU</span>
+                </div>
+            </div>
+            <div id="timelineBar" class="flex gap-[2px] h-9 rounded-md overflow-hidden"></div>
+            <div class="flex justify-between text-[10px] text-slate-500 font-mono mt-1.5">
+                <span>00:00</span><span>01:14</span><span>02:28</span><span>03:42</span>
+            </div>
+        </div>
+
+        <!-- ④ QC WARNINGS -->
+        <div id="qcBox" class="bg-red-950/20 border border-red-900/40 rounded-xl p-3 shrink-0">
+            <div class="flex items-start gap-3">
+                <i class="fa-solid fa-triangle-exclamation text-red-400 mt-0.5"></i>
+                <div class="flex-1">
+                    <div id="qcTitle" class="text-xs text-red-300 font-semibold mb-2">Đang kiểm tra…</div>
+                    <div id="qcList" class="flex flex-wrap gap-2 text-[11px]"></div>
+                </div>
+                <button onclick="autoFixAll()" class="text-[11px] bg-cardBg border border-borderDark hover:border-accentOrange px-3 py-1.5 rounded transition whitespace-nowrap">
+                    <i class="fa-solid fa-wand-magic-sparkles text-accentOrange text-[10px]"></i> Tự sửa tất cả
+                </button>
+            </div>
+        </div>
+
+        <!-- ⑤ BẢNG + INSPECTOR -->
+        <div class="flex gap-4 items-start">
+
+            <!-- BẢNG -->
+            <div class="flex-1 bg-cardBg border border-borderDark rounded-xl overflow-hidden min-w-0">
+                <div class="flex justify-between items-center px-4 py-2.5 border-b border-borderDark">
+                    <span class="text-xs text-orange-400 font-bold uppercase tracking-wider">| Shot list</span>
+                    <div class="flex gap-2 text-[11px]">
+                        <button class="text-slate-300 hover:text-accentOrange transition"><i class="fa-solid fa-plus text-[10px]"></i> Thêm shot</button>
+                        <span class="text-borderDark">|</span>
+                        <button class="text-slate-300 hover:text-accentOrange transition"><i class="fa-solid fa-copy text-[10px]"></i> Copy all prompts</button>
+                        <span class="text-borderDark">|</span>
+                        <button class="text-slate-300 hover:text-accentOrange transition"><i class="fa-solid fa-file-export text-[10px]"></i> Xuất</button>
+                        <span class="text-borderDark">|</span>
+                        <button class="text-red-400/80 hover:text-red-400 transition"><i class="fa-solid fa-trash-can text-[10px]"></i> Xóa bảng</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs">
+                        <thead class="bg-darkBg text-slate-400 text-[10px] uppercase tracking-wider sticky top-0">
+                            <tr>
+                                <th class="p-2.5 text-left w-10">#</th>
+                                <th class="p-2.5 text-left w-28">Timecode</th>
+                                <th class="p-2.5 text-left w-14">Dur</th>
+                                <th class="p-2.5 text-left">Nội dung / Hành động</th>
+                                <th class="p-2.5 text-left w-24">Cỡ cảnh</th>
+                                <th class="p-2.5 text-left w-32">Chuyển động máy</th>
+                                <th class="p-2.5 text-left w-28">Chuyển cảnh</th>
+                                <th class="p-2.5 text-left w-16">AI</th>
+                                <th class="p-2.5 text-left w-16"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="shotTableBody" class="divide-y divide-borderDark"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- INSPECTOR -->
+            <div class="w-80 shrink-0 bg-cardBg border border-borderDark rounded-xl sticky top-0">
+                <div class="px-4 py-2.5 border-b border-borderDark flex justify-between items-center">
+                    <span class="text-xs text-orange-400 font-bold uppercase tracking-wider">| Shot Inspector</span>
+                    <span id="inspShotNo" class="text-[10px] font-mono text-slate-500">#01</span>
+                </div>
+                <div class="p-4 space-y-3.5 text-xs">
+                    <div>
+                        <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Nội dung</div>
+                        <div id="inspText" class="text-slate-200 leading-relaxed"></div>
+                    </div>
+
+                    <div class="bg-darkBg border border-borderDark rounded-lg p-3">
+                        <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1.5">
+                            <i class="fa-solid fa-brain text-accentOrange"></i> Lý do AI chọn góc này
+                        </div>
+                        <div id="inspReason" class="text-slate-300 leading-relaxed text-[11px]"></div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Ống kính</div>
+                            <select class="w-full bg-darkBg border border-borderDark rounded px-2 py-1.5 text-[11px] focus:outline-none focus:border-accentOrange">
+                                <option>24mm – Rộng</option><option selected>35mm – Tự nhiên</option><option>85mm – Nén hậu cảnh</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Độ sâu DOF</div>
+                            <select class="w-full bg-darkBg border border-borderDark rounded px-2 py-1.5 text-[11px] focus:outline-none focus:border-accentOrange">
+                                <option>Sâu (f/8)</option><option selected>Vừa (f/4)</option><option>Nông (f/1.8)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Ánh sáng / VFX</div>
+                        <textarea class="w-full h-16 bg-darkBg border border-borderDark rounded px-2 py-1.5 text-[11px] resize-none focus:outline-none focus:border-accentOrange leading-relaxed">Ánh sáng xanh lạnh từ màn hình dữ liệu, tương phản cao, hạt phim nhẹ.</textarea>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Prompt sinh ảnh</span>
+                            <span class="text-[9px] text-emerald-400">style từ profile ✓</span>
+                        </div>
+                        <div id="inspPrompt" class="bg-darkBg border border-borderDark rounded p-2.5 font-mono text-[10px] text-slate-400 leading-relaxed max-h-28 overflow-y-auto"></div>
+                    </div>
+
+                    <div class="flex gap-2 pt-1">
+                        <button class="flex-1 bg-accentOrange hover:bg-accentOrangeHover text-white text-[11px] py-2 rounded font-semibold transition">
+                            <i class="fa-solid fa-copy text-[10px]"></i> Copy prompt
+                        </button>
+                        <button class="px-3 bg-darkBg border border-borderDark hover:border-accentOrange text-[11px] py-2 rounded transition" title="Chỉ sinh lại shot này">
+                            <i class="fa-solid fa-rotate text-accentOrange"></i>
+                        </button>
+                        <button class="px-3 bg-darkBg border border-borderDark hover:border-accentOrange text-[11px] py-2 rounded transition" title="Tách shot này làm đôi">
+                            <i class="fa-solid fa-scissors text-cyan-400"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+/* ===== DỮ LIỆU MẪU (mockup) ===== */
+const SHOTS = [
+    {no:1, tc:"00:00:00,000", dur:9.6, warn:true,  text:"2026년, 반도체 산업은 완전히 새로운 국면에 접어들었습니다.", size:"EWS", sizeLabel:"EWS", mv:"Slow Push In", tr:"Fade In", ai:96,
+     reason:"Câu mở đề, nêu bối cảnh vĩ mô toàn ngành → cần shot thiết lập rộng. Push in chậm tạo lực kéo vào chủ đề. Cảnh báo: 9.6s vượt ngưỡng 6s, nên tách thành EWS (0–5s) + WS nhà máy (5–9.6s)."},
+    {no:2, tc:"00:00:09,600", dur:3.6, warn:false, text:"엔비디아의 시가총액이 4조 달러를 돌파했습니다.", size:"CU", sizeLabel:"CU", mv:"Static", tr:"Hard Cut", ai:91,
+     reason:"Con số cụ thể mang tính cú đấm thông tin → cắt cứng sang cận cảnh biểu đồ, máy đứng yên để mắt người xem đọc kịp số liệu."},
+    {no:3, tc:"00:00:13,200", dur:4.2, warn:false, text:"그러나 이 성장의 이면에는 심각한 공급망 리스크가 존재합니다.", size:"MS", sizeLabel:"MS", mv:"Slow Pan Right", tr:"Smooth Cut", ai:88,
+     reason:"Từ nối '그러나' báo hiệu đảo chiều lập luận → hạ về trung cảnh, pan chậm sang phải tạo cảm giác chuyển hướng câu chuyện."},
+    {no:4, tc:"00:00:17,400", dur:5.1, warn:true,  text:"대만 TSMC 공장의 가동률은 이미 한계에 도달했습니다.", size:"MS", sizeLabel:"MS", mv:"Static", tr:"Smooth Cut", ai:74,
+     reason:"Trùng cỡ cảnh MS với shot 03 → dựng bị phẳng. Gợi ý đổi sang WS toàn cảnh nhà máy để tạo tương phản không gian."},
+    {no:5, tc:"00:00:22,500", dur:3.8, warn:false, text:"한 대에 3천억 원이 넘는 EUV 노광 장비.", size:"ECU", sizeLabel:"ECU", mv:"Rack Focus", tr:"Match Cut", ai:94,
+     reason:"Nhấn vào vật thể đơn lẻ có giá trị cao → cực cận + rack focus làm nổi chi tiết thấu kính, match cut giữ mạch từ shot trước."},
+    {no:6, tc:"00:00:26,300", dur:4.4, warn:false, text:"전 세계에서 단 한 곳, ASML만이 이를 생산합니다.", size:"WS", sizeLabel:"WS", mv:"Drone Establish", tr:"Hard Cut", ai:89,
+     reason:"Chuyển địa điểm sang Hà Lan → bắt buộc có shot thiết lập mới để khán giả định vị lại không gian."},
+    {no:7, tc:"00:00:30,700", dur:2.9, warn:true,  text:"독점은 곧 취약성을 의미합니다.", size:"CU", sizeLabel:"CU", mv:"Static", tr:"Hard Cut", ai:70,
+     reason:"Câu chốt ngắn, mạnh → cận cảnh hợp lý. Nhưng đây là CU thứ 3 liên tiếp trong 12s, nhịp bị ngộp, nên chèn 1 WS đệm phía trước."},
+    {no:8, tc:"00:00:33,600", dur:5.5, warn:false, text:"만약 공급이 멈춘다면, 세계 경제는 어떻게 될까요?", size:"MS", sizeLabel:"MS", mv:"Slow Pull Out", tr:"Fade", ai:92,
+     reason:"Câu hỏi mở kết đoạn → pull out chậm mở rộng không gian, fade tạo khoảng lặng trước phần tiếp theo."}
+];
+
+const SIZE_CLS = {EWS:"sz-ews", WS:"sz-ws", MS:"sz-ms", CU:"sz-cu", ECU:"sz-ecu"};
+const TL_CLS   = {EWS:"tl-ews", WS:"tl-ws", MS:"tl-ms", CU:"tl-cu", ECU:"tl-ecu"};
+let activeNo = 1;
+
+/* ══════════════════════════════════════════════════════════════
+   MODULE 2 — PROJECT SAVE / LOAD (đồng bộ pattern với Tool 2)
+   ══════════════════════════════════════════════════════════════ */
+
+let currentActiveProject = localStorage.getItem('bk_last_active_project') || 'Default_Project';
+let autoSaveTimer = null;
+
+function showToast(msg, isError) {
+    let host = document.getElementById('toastContainer');
+    if (!host) {
+        host = document.createElement('div');
+        host.id = 'toastContainer';
+        host.className = 'fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none';
+        document.body.appendChild(host);
+    }
+    const t = document.createElement('div');
+    t.className = 'bg-cardBg border text-xs px-4 py-2.5 rounded-lg shadow-xl ' +
+        (isError ? 'border-red-500/50 text-red-300' : 'border-emerald-500/50 text-emerald-300');
+    t.textContent = msg;
+    host.appendChild(t);
+    setTimeout(() => t.remove(), 2600);
+}
+
+function setSaveBadge(state) {
+    const b = document.getElementById('saveBadge');
+    if (!b) return;
+    if (state === 'saving') {
+        b.className = 'text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-full';
+        b.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-[8px]"></i> Đang lưu…';
+    } else {
+        b.className = 'text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-full';
+        b.innerHTML = '<i class="fa-solid fa-circle text-[6px] align-middle"></i> Đã lưu ngầm';
+    }
+}
+
+/* --- Thu thập toàn bộ trạng thái trang --- */
+function collectState() {
+    const rows = [...document.querySelectorAll('#shotTableBody tr')];
+    const shots = rows.map(tr => {
+        const no = +tr.dataset.no;
+        const base = SHOTS.find(s => s.no === no) || {};
+        return {
+            ...base,
+            text: tr.querySelector('.cell-input')?.value ?? base.text,
+            mv:   tr.querySelectorAll('select')[0]?.value ?? base.mv,
+            tr:   tr.querySelectorAll('select')[1]?.value ?? base.tr
+        };
+    });
+
+    return {
+        srt:        document.getElementById('srtInput')?.value || '',
+        genre:      document.getElementById('cfgGenre')?.value || '',
+        transition: document.getElementById('cfgTransition')?.value || '',
+        vfx:        document.getElementById('cfgVfx')?.value || '',
+        maxSec:     document.getElementById('cfgMaxSec')?.value || 6,
+        rules: {
+            splitLong: document.getElementById('ruleSplitLong')?.checked,
+            noRepeat:  document.getElementById('ruleNoRepeat')?.checked,
+            openWide:  document.getElementById('ruleOpenWide')?.checked,
+            axis180:   document.getElementById('ruleAxis180')?.checked
+        },
+        shots: shots.length ? shots : SHOTS,
+        activeNo: activeNo,
+        savedAt: Date.now()
+    };
+}
+
+function saveCurrentProjectData(silent) {
+    try {
+        localStorage.setItem(
+            `bk_camera_data_${currentActiveProject}`,
+            JSON.stringify(collectState())
+        );
+        setSaveBadge('saved');
+        if (!silent) showToast(`Đã lưu dự án [${currentActiveProject}]`);
+    } catch (e) {
+        showToast('Lỗi lưu dữ liệu: ' + e.message, true);
+    }
+}
+
+function loadProjectData(projName) {
+    const raw = localStorage.getItem(`bk_camera_data_${projName}`);
+    if (!raw) return;
+    try {
+        const d = JSON.parse(raw);
+        const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
+        const chk = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.checked = !!v; };
+
+        set('srtInput', d.srt);
+        set('cfgGenre', d.genre);
+        set('cfgTransition', d.transition);
+        set('cfgVfx', d.vfx);
+        set('cfgMaxSec', d.maxSec);
+        if (d.rules) {
+            chk('ruleSplitLong', d.rules.splitLong);
+            chk('ruleNoRepeat',  d.rules.noRepeat);
+            chk('ruleOpenWide',  d.rules.openWide);
+            chk('ruleAxis180',   d.rules.axis180);
+        }
+
+        if (Array.isArray(d.shots) && d.shots.length) {
+            SHOTS.length = 0;
+            SHOTS.push(...d.shots);
+            renderTable();
+            renderTimeline();
+            selectRow(d.activeNo && SHOTS.some(s => s.no === d.activeNo) ? d.activeNo : SHOTS[0].no);
+        }
+    } catch (e) {
+        console.error('Lỗi đọc project:', e);
+    }
+}
+
+/* --- Dropdown project --- */
+function initProjectsList() {
+    const projects = JSON.parse(localStorage.getItem('bk_projects_list') || '["Default_Project"]');
+    if (!projects.includes(currentActiveProject)) currentActiveProject = projects[0];
+    const dd = document.getElementById('projectSelectDropdown');
+    if (!dd) return;
+    dd.innerHTML = '<option value="__new__">+ New Project…</option>' +
+        projects.map(p => `<option value="${p}"${p === currentActiveProject ? ' selected' : ''}>${p}</option>`).join('');
+}
+
+function handleProjectSelect(sel) {
+    if (sel.value === '__new__') { sel.value = currentActiveProject; createNewProject(); return; }
+    if (sel.value === currentActiveProject) return;
+    saveCurrentProjectData(true);
+    currentActiveProject = sel.value;
+    localStorage.setItem('bk_last_active_project', currentActiveProject);
+    loadProjectData(currentActiveProject);
+    showToast(`Đã mở project: ${currentActiveProject}`);
+}
+
+function createNewProject() {
+    const name = (prompt('Tên project mới:') || '').trim();
+    if (!name) return;
+    const projects = JSON.parse(localStorage.getItem('bk_projects_list') || '["Default_Project"]');
+    if (projects.includes(name)) { showToast(`Project "${name}" đã tồn tại!`, true); return; }
+    saveCurrentProjectData(true);
+    projects.push(name);
+    localStorage.setItem('bk_projects_list', JSON.stringify(projects));
+    currentActiveProject = name;
+    localStorage.setItem('bk_last_active_project', name);
+    initProjectsList();
+    saveCurrentProjectData(true);
+    showToast(`Đã tạo project: ${name}`);
+}
+
+function manualSaveProject() { saveCurrentProjectData(false); }
+
+function exportProjectJSON() {
+    const blob = new Blob([JSON.stringify(collectState(), null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `camera_${currentActiveProject}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('Đã xuất JSON shot list');
+}
+
+/* --- Auto-save 1.5s sau thay đổi cuối --- */
+function scheduleAutoSave() {
+    setSaveBadge('saving');
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => saveCurrentProjectData(true), 1500);
+}
+
+document.addEventListener('input',  e => { if (e.target.closest('main')) scheduleAutoSave(); });
+document.addEventListener('change', e => { if (e.target.closest('main')) scheduleAutoSave(); });
+window.addEventListener('beforeunload', () => saveCurrentProjectData(true));
+
+function renderTable() {
+    document.getElementById('shotTableBody').innerHTML = SHOTS.map(s => `
+        <tr class="hover:bg-darkBg/40 transition cursor-pointer ${s.warn?'row-warn':''}" data-no="${s.no}" onclick="selectRow(${s.no})">
+            <td class="p-2.5 font-mono text-slate-500">${String(s.no).padStart(2,'0')}</td>
+            <td class="p-2.5 font-mono text-[10px] text-slate-400">${s.tc}</td>
+            <td class="p-2.5 font-mono ${s.dur>6?'text-red-400 font-bold':'text-slate-400'}">${s.dur}s</td>
+            <td class="p-2.5"><input class="cell-input w-full rounded px-1.5 py-1 text-slate-200" value="${s.text}"></td>
+            <td class="p-2.5"><span class="${SIZE_CLS[s.size]} px-2 py-1 rounded font-bold text-[10px] tracking-wide">${s.sizeLabel}</span></td>
+            <td class="p-2.5">
+                <select class="cell-sel w-full rounded px-1.5 py-1 text-[11px] text-slate-200">
+                    <option selected>${s.mv}</option><option>Static</option><option>Slow Push In</option>
+                    <option>Slow Pull Out</option><option>Pan</option><option>Tilt</option><option>Handheld</option><option>Rack Focus</option>
+                </select>
+            </td>
+            <td class="p-2.5">
+                <select class="cell-sel w-full rounded px-1.5 py-1 text-[11px] text-slate-300">
+                    <option selected>${s.tr}</option><option>Smooth Cut</option><option>Hard Cut</option><option>Fade</option><option>Match Cut</option>
+                </select>
+            </td>
+            <td class="p-2.5">
+                <span class="font-mono text-[10px] ${s.ai>=85?'text-emerald-400':s.ai>=75?'text-amber-400':'text-red-400'}">${s.ai}%</span>
+            </td>
+            <td class="p-2.5">
+                <button class="text-slate-500 hover:text-accentOrange transition mr-1.5" title="Copy prompt"><i class="fa-solid fa-copy text-[11px]"></i></button>
+                <button class="text-slate-500 hover:text-red-400 transition" title="Xóa"><i class="fa-solid fa-xmark text-[11px]"></i></button>
+            </td>
+        </tr>`).join('');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MODULE 3 — TÍNH METRICS & QC THẬT TỪ BẢNG
+   ══════════════════════════════════════════════════════════════ */
+
+const ALL_SIZES = ['EWS','WS','MS','CU','ECU'];
+
+function computeQC() {
+    const maxSec = parseFloat(document.getElementById('cfgMaxSec')?.value) || 6;
+    const warnings = [];
+
+    if (!SHOTS.length) {
+        return { metrics: { total:0, durationTc:'0:00', pace:0, diversity:0, tooLong:0, warn:0 }, warnings };
+    }
+
+    const totalDur = SHOTS.reduce((a, s) => a + (+s.dur || 0), 0);
+    const sizes = SHOTS.map(s => s.size);
+
+    // 1. Shot vượt ngưỡng giây
+    let tooLong = 0;
+    SHOTS.forEach(s => {
+        if ((+s.dur || 0) > maxSec) {
+            tooLong++;
+            const parts = Math.max(2, Math.floor(s.dur / maxSec) + 1);
+            warnings.push({ level:'error', no:s.no,
+                msg:`Shot ${String(s.no).padStart(2,'0')} · ${s.dur}s quá dài → nên tách ${parts}` });
+        }
+    });
+
+    // 2. Trùng cỡ cảnh liền kề
+    for (let i = 1; i < sizes.length; i++) {
+        if (sizes[i] === sizes[i-1]) {
+            warnings.push({ level:'error', no:SHOTS[i].no,
+                msg:`Shot ${String(SHOTS[i-1].no).padStart(2,'0')}–${String(SHOTS[i].no).padStart(2,'0')} · lặp cỡ cảnh ${sizes[i]}` });
+        }
+    }
+
+    // 3. Ba shot liên tiếp cùng cỡ → nhịp ngộp
+    for (let i = 2; i < sizes.length; i++) {
+        if (sizes[i] === sizes[i-1] && sizes[i-1] === sizes[i-2]) {
+            warnings.push({ level:'warn', no:SHOTS[i].no,
+                msg:`Shot ${String(SHOTS[i].no).padStart(2,'0')} · 3 ${sizes[i]} liên tiếp, thiếu nhịp thở` });
+        }
+    }
+
+    // 4. Thiếu shot thiết lập mở đầu
+    if (!['EWS','WS'].includes(sizes[0])) {
+        warnings.push({ level:'warn', no:SHOTS[0].no, msg:'Thiếu shot thiết lập rộng ở mở đầu' });
+    }
+
+    const mins = Math.floor(totalDur / 60);
+    const secs = Math.round(totalDur % 60);
+
+    return {
+        metrics: {
+            total: SHOTS.length,
+            durationTc: `${mins}:${String(secs).padStart(2,'0')}`,
+            pace: (totalDur / SHOTS.length).toFixed(1),
+            diversity: Math.round(new Set(sizes).size / ALL_SIZES.length * 100),
+            tooLong,
+            warn: warnings.length
+        },
+        warnings
+    };
+}
+
+function renderMetrics() {
+    const { metrics, warnings } = computeQC();
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+
+    set('mTotal', metrics.total);
+    set('mDuration', metrics.durationTc);
+    set('mPace', metrics.pace);
+    set('mDiversity', metrics.diversity);
+    set('mTooLong', metrics.tooLong);
+    set('mWarn', metrics.warn);
+
+    // Đổi màu chỉ số đa dạng theo mức
+    const div = document.getElementById('mDiversity');
+    if (div) div.className = metrics.diversity >= 80 ? 'text-emerald-400'
+                          : metrics.diversity >= 60 ? 'text-amber-400' : 'text-red-400';
+
+    renderWarnings(warnings);
+}
+
+function renderWarnings(warnings) {
+    const box = document.getElementById('qcBox');
+    const list = document.getElementById('qcList');
+    const title = document.getElementById('qcTitle');
+    if (!box || !list) return;
+
+    if (!warnings.length) {
+        box.className = 'bg-emerald-950/20 border border-emerald-900/40 rounded-xl p-3 shrink-0';
+        box.querySelector('i').className = 'fa-solid fa-circle-check text-emerald-400 mt-0.5';
+        title.className = 'text-xs text-emerald-300 font-semibold mb-2';
+        title.textContent = 'Không phát hiện lỗi dựng — nhịp hình ảnh hợp lệ';
+        list.innerHTML = '';
+        return;
+    }
+
+    box.className = 'bg-red-950/20 border border-red-900/40 rounded-xl p-3 shrink-0';
+    box.querySelector('i').className = 'fa-solid fa-triangle-exclamation text-red-400 mt-0.5';
+    title.className = 'text-xs text-red-300 font-semibold mb-2';
+    title.textContent = `${warnings.length} cảnh báo dựng — bấm để nhảy tới shot`;
+
+    list.innerHTML = warnings.map(w => {
+        const cls = w.level === 'error'
+            ? 'bg-red-500/10 border-red-500/30 text-red-300 hover:bg-red-500/20'
+            : 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20';
+        return `<button onclick="selectRow(${w.no})" class="${cls} border px-2.5 py-1 rounded-full transition">${w.msg}</button>`;
+    }).join('');
+}
+
+function renderTimeline() {
+    document.getElementById('timelineBar').innerHTML = SHOTS.map(s => `
+        <div class="${TL_CLS[s.size]} relative group cursor-pointer hover:opacity-80 transition flex items-center justify-center"
+             style="flex:${s.dur}" onclick="selectRow(${s.no})" title="Shot ${s.no} · ${s.size} · ${s.dur}s">
+            <span class="text-[9px] font-bold text-black/60">${s.dur>=3.5?s.size:''}</span>
+            ${s.warn?'<i class="fa-solid fa-triangle-exclamation absolute -top-0.5 right-0.5 text-[7px] text-red-900"></i>':''}
+        </div>`).join('');
+}
+
+function selectRow(no) {
+    activeNo = no;
+    const s = SHOTS.find(x => x.no === no); if (!s) return;
+    document.querySelectorAll('#shotTableBody tr').forEach(tr =>
+        tr.classList.toggle('row-active', +tr.dataset.no === no));
+    document.getElementById('inspShotNo').textContent = '#' + String(no).padStart(2,'0');
+    document.getElementById('inspText').textContent = s.text;
+    document.getElementById('inspReason').textContent = s.reason;
+    document.getElementById('inspPrompt').textContent =
+        `[Shot ${String(no).padStart(2,'0')} | ${s.tc} | ${s.dur}s] ${s.size}, ${s.mv}, 35mm f/4. ${s.text} — cinematic tech-documentary still, cool blue data-screen lighting, high contrast, subtle film grain, 16:9.`;
+}
+
+/* ===== AI ENGINE: model + chế độ phân tích ===== */
+const DEPTH_INFO = {
+    fast:     "Gửi toàn bộ shot trong 1 lượt gọi. Nhanh nhất, phù hợp duyệt sơ bộ hoặc kịch bản dưới ~15 shot.",
+    balanced: "Phân lô nhỏ, đối chiếu ngữ cảnh 2 shot liền kề để tránh lặp cỡ cảnh. Cân bằng giữa tốc độ và độ chính xác — phù hợp phần lớn video.",
+    deep:     "Đọc toàn mạch kịch bản trước để nắm cấu trúc kể chuyện, sau đó phân tích từng shot và review chéo 2 lượt để bắt lỗi nhịp dựng. Chậm hơn nhưng chính xác nhất cho kịch bản dài, nhiều twist."
+};
+
+function selectModel(el) {
+    document.querySelectorAll('#modelPicker .model-card').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    updateEngineEstimate();
+}
+
+function selectDepth(el) {
+    document.querySelectorAll('#depthPicker .depth-tab').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('depthDesc').textContent = DEPTH_INFO[el.dataset.depth] || '';
+    updateEngineEstimate();
+}
+
+function updateEngineEstimate() {
+    const model = document.querySelector('#modelPicker .model-card.active')?.dataset.model || 'gemini-2.5-flash';
+    const depth = document.querySelector('#depthPicker .depth-tab.active')?.dataset.depth || 'balanced';
+    const n = SHOTS.length;
+
+    const speedFactor = { 'gemini-2.0-flash-exp': 0.6, 'gemini-2.5-flash': 1, 'gemini-2.5-pro': 2.2 }[model] || 1;
+    const depthFactor = { fast: 0.5, balanced: 1, deep: 2 }[depth] || 1;
+    const est = Math.max(3, Math.round(n * 0.4 * speedFactor * depthFactor));
+    const lo = Math.round(est * 0.8), hi = Math.round(est * 1.3);
+
+    document.getElementById('engineEstimate').textContent = `~${n} shot · ước tính ${lo}–${hi}s`;
+}
+
+/* --- Tự sửa các lỗi dựng phát hiện được --- */
+function autoFixAll() {
+    const maxSec = parseFloat(document.getElementById('cfgMaxSec')?.value) || 6;
+    let fixed = 0;
+
+    // 1. Tách shot quá dài thành nhiều shot con
+    if (document.getElementById('ruleSplitLong')?.checked) {
+        for (let i = SHOTS.length - 1; i >= 0; i--) {
+            const s = SHOTS[i];
+            if ((+s.dur || 0) <= maxSec) continue;
+            const parts = Math.max(2, Math.floor(s.dur / maxSec) + 1);
+            const step = s.dur / parts;
+            const baseIdx = ALL_SIZES.indexOf(s.size);
+            const subs = [];
+            for (let k = 0; k < parts; k++) {
+                const sz = k === 0 ? s.size
+                    : ALL_SIZES[Math.min(baseIdx + 1, ALL_SIZES.length - 1)];
+                subs.push({ ...s,
+                    no: +(s.no + (k ? k / 10 : 0)).toFixed(1),
+                    dur: +step.toFixed(1),
+                    size: sz, sizeLabel: sz, warn: false,
+                    reason: `Tách từ shot ${s.no} (${s.dur}s) thành ${parts} phần để giữ nhịp dựng.`
+                });
+            }
+            SHOTS.splice(i, 1, ...subs);
+            fixed++;
+        }
+    }
+
+    // 2. Phá trùng cỡ cảnh liền kề
+    if (document.getElementById('ruleNoRepeat')?.checked) {
+        for (let i = 1; i < SHOTS.length; i++) {
+            if (SHOTS[i].size !== SHOTS[i-1].size) continue;
+            const idx = ALL_SIZES.indexOf(SHOTS[i].size);
+            const next = idx < ALL_SIZES.length - 1 ? ALL_SIZES[idx+1] : ALL_SIZES[idx-1];
+            SHOTS[i].size = next;
+            SHOTS[i].sizeLabel = next;
+            SHOTS[i].reason += ` (Tự đổi sang ${next} để tránh trùng cỡ cảnh liền trước.)`;
+            fixed++;
+        }
+    }
+
+    // 3. Ép shot mở đầu là shot thiết lập
+    if (document.getElementById('ruleOpenWide')?.checked && SHOTS.length
+        && !['EWS','WS'].includes(SHOTS[0].size)) {
+        SHOTS[0].size = 'EWS';
+        SHOTS[0].sizeLabel = 'EWS';
+        SHOTS[0].reason += ' (Tự đổi sang EWS để mở đoạn bằng shot thiết lập.)';
+        fixed++;
+    }
+
+    // Đánh số lại liên tục
+    SHOTS.forEach((s, i) => { s.no = i + 1; });
+
+    renderTable(); renderTimeline(); renderMetrics();
+    selectRow(SHOTS.length ? SHOTS[0].no : 1);
+    scheduleAutoSave();
+    showToast(fixed ? `Đã tự sửa ${fixed} vấn đề dựng` : 'Không có gì cần sửa');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MODULE 5 — GỌI API PHÂN TÍCH GÓC MÁY THẬT
+   ══════════════════════════════════════════════════════════════ */
+
+async function runAnalysis() {
+    const srt = document.getElementById('srtInput')?.value.trim() || '';
+    const apiKey = document.getElementById('sidebarApiKeyInput')?.value.trim() || '';
+
+    if (!srt) {
+        showToast('Vui lòng dán nội dung SRT hoặc nhập từ Tool 2 trước', true);
+        return;
+    }
+    if (!apiKey) {
+        showToast('Chưa có API Key — sẽ dùng bộ luật dự phòng (chất lượng hạn chế)', false);
+    }
+
+    const btn = document.getElementById('btnAnalyze');
+    const icon = document.getElementById('btnAnalyzeIcon');
+    const label = document.getElementById('btnAnalyzeLabel');
+    const model = document.querySelector('#modelPicker .model-card.active')?.dataset.model || 'gemini-2.5-flash';
+    const depth = document.querySelector('#depthPicker .depth-tab.active')?.dataset.depth || 'balanced';
+
+    // UI loading
+    btn.disabled = true;
+    icon.className = 'fa-solid fa-circle-notch fa-spin';
+    label.textContent = 'Đang phân tích...';
+
+    try {
+        const res = await fetch('/api/analyze-camera', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                srt_content: srt,
+                api_key: apiKey,
+                genre: document.getElementById('cfgGenre')?.value || 'explainer',
+                transition_default: document.getElementById('cfgTransition')?.value || 'Smooth Cut',
+                vfx_style: document.getElementById('cfgVfx')?.value || 'Cinematic Depth',
+                max_shot_seconds: parseFloat(document.getElementById('cfgMaxSec')?.value) || 6,
+                constraints: {
+                    split_long: document.getElementById('ruleSplitLong')?.checked || false,
+                    no_repeat: document.getElementById('ruleNoRepeat')?.checked || false,
+                    open_wide: document.getElementById('ruleOpenWide')?.checked || false,
+                    axis_180: document.getElementById('ruleAxis180')?.checked || false
+                },
+                style_guide: window.activeProfileStyleGuide || '',
+                model: model
+            })
+        });
+
+        const json = await res.json();
+        if (json.status !== 'success') throw new Error(json.message || 'API trả lỗi');
+
+        const { shots, metrics, warnings, source, note } = json.data;
+
+        // Cập nhật bảng
+        SHOTS.length = 0;
+        SHOTS.push(...shots);
+        renderTable();
+        renderTimeline();
+        renderMetrics();
+        if (SHOTS.length) selectRow(SHOTS[0].no);
+
+        scheduleAutoSave();
+
+        // Thông báo nguồn
+        if (source === 'ai') {
+            showToast(`AI đã phân tích ${shots.length} shot — nhấp vào shot để xem lý do chọn góc`);
+        } else {
+            showToast(note || 'Đã dùng bộ luật dự phòng — kết quả có thể không tối ưu', true);
+        }
+
+    } catch (e) {
+        showToast('Lỗi phân tích: ' + e.message, true);
+    } finally {
+        btn.disabled = false;
+        icon.className = 'fa-solid fa-wand-magic-sparkles';
+        label.textContent = 'Phân tích & Thiết kế góc máy';
+    }
+}
+
+function recalcMetrics() {
+    renderMetrics();
+    showToast('Đã tính lại metrics');
+}
+
+function togglePanel(id, btn) {
+    const el = document.getElementById(id);
+    el.classList.toggle('hidden');
+    btn.querySelector('i').style.transform = el.classList.contains('hidden') ? 'rotate(180deg)' : '';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MODULE 4 — IMPORT TỪ TOOL 2 (SCENE BREAKDOWN)
+   ══════════════════════════════════════════════════════════════ */
+
+// Đọc bảng scene mà Tool 2 đã lưu trong localStorage của cùng project
+function readTool2Scenes() {
+    const raw = localStorage.getItem(`bk_scene_breakdown_data_${currentActiveProject}`);
+    if (!raw) return [];
+    let tableHtml = '';
+    try { tableHtml = (JSON.parse(raw) || {}).tableHtml || ''; }
+    catch (e) { return []; }
+    if (!tableHtml.trim()) return [];
+
+    const host = document.createElement('tbody');
+    host.innerHTML = tableHtml;
+
+    const scenes = [];
+    host.querySelectorAll('tr').forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length < 3) return;
+        const cellVal = td => (td.querySelector('input,textarea,select')?.value ?? td.innerText).trim();
+        const id   = cellVal(tds[0]);
+        const tc   = cellVal(tds[1]);
+        const text = cellVal(tds[2]);
+        if (!text || /chưa có phân cảnh/i.test(text)) return;
+        scenes.push({
+            id, timecode: tc, text,
+            character:  tds[3] ? cellVal(tds[3]) : '',
+            background: tds[4] ? cellVal(tds[4]) : ''
+        });
+    });
+    return scenes;
+}
+
+// Đổi timecode "HH:MM:SS,mmm" → giây
+function tcToSec(tc) {
+    const m = /(\d{1,2}):(\d{2}):(\d{2})[,.](\d{1,3})/.exec(tc || '');
+    if (!m) return null;
+    return +m[1]*3600 + +m[2]*60 + +m[3] + (+m[4].padEnd(3,'0'))/1000;
+}
+
+function secToTc(s) {
+    s = Math.max(0, s);
+    const h = Math.floor(s/3600), m = Math.floor(s%3600/60),
+          sec = Math.floor(s%60), ms = Math.round((s - Math.floor(s))*1000);
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')},${String(Math.min(ms,999)).padStart(3,'0')}`;
+}
+
+// Cập nhật trạng thái tab "Lấy từ Tool 2"
+function refreshTool2Status() {
+    const scenes = readTool2Scenes();
+    const status = document.getElementById('t2Status');
+    const btn    = document.getElementById('t2ImportBtn');
+    const label  = document.getElementById('t2BtnLabel');
+    if (!status || !btn) return;
+
+    if (scenes.length) {
+        status.className = 'flex items-center gap-2 text-emerald-400';
+        status.innerHTML = `<i class="fa-solid fa-circle-check"></i> Tìm thấy ${scenes.length} scene từ Tool 2 — project [${currentActiveProject}]`;
+        btn.disabled = false;
+        label.textContent = `Nhập ${scenes.length} scene`;
+    } else {
+        status.className = 'flex items-center gap-2 text-amber-400';
+        status.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Chưa có scene nào trong project [${currentActiveProject}] — hãy chạy Split Scenes ở Tool 2 trước`;
+        btn.disabled = true;
+        label.textContent = 'Nhập scene';
+    }
+}
+
+// Chuyển scene của Tool 2 thành shot list của Tool 4
+function importFromTool2() {
+    const scenes = readTool2Scenes();
+    if (!scenes.length) { showToast('Không tìm thấy scene nào từ Tool 2', true); return; }
+
+    const maxSec = parseFloat(document.getElementById('cfgMaxSec')?.value) || 6;
+    let cursor = 0;
+
+    const rows = scenes.map((sc, i) => {
+        // Lấy mốc thời gian; thiếu thì ước lượng ~15 ký tự/giây đọc
+        const m = /(\d{1,2}:\d{2}:\d{2}[,.]\d{1,3})\s*-->\s*(\d{1,2}:\d{2}:\d{2}[,.]\d{1,3})/.exec(sc.timecode || '');
+        let start = m ? tcToSec(m[1]) : tcToSec(sc.timecode);
+        let end   = m ? tcToSec(m[2]) : null;
+        if (start == null) start = cursor;
+        if (end == null || end <= start) end = start + Math.max(2, sc.text.length / 15);
+        cursor = end;
+
+        const dur = +(end - start).toFixed(1);
+        return { no: i + 1, tc: secToTc(start), dur, text: sc.text,
+                 character: sc.character, background: sc.background, sceneId: sc.id };
+    });
+
+    // Gán cỡ cảnh theo cấu trúc câu (không phụ thuộc ngôn ngữ), tránh trùng liền kề
+    let prev = '';
+    const shots = rows.map((r, i) => {
+        const hasNum = /\d/.test(r.text);
+        const isQ    = /[?？]\s*$/.test(r.text);
+        const len    = r.text.length;
+        let size, mv, reason;
+
+        if (i === 0)                   [size, mv, reason] = ['EWS','Slow Push In','Câu mở đầu — shot thiết lập rộng dựng bối cảnh toàn bài.'];
+        else if (i === rows.length-1)  [size, mv, reason] = ['WS','Slow Pull Out','Câu kết — pull out mở rộng không gian tạo cảm giác khép lại.'];
+        else if (hasNum && len < 25)   [size, mv, reason] = ['ECU','Static','Câu ngắn chứa số liệu — cực cận để người xem đọc kịp con số.'];
+        else if (hasNum)               [size, mv, reason] = ['CU','Static','Câu chứa số liệu cụ thể — cận cảnh nhấn mạnh dữ kiện.'];
+        else if (isQ)                  [size, mv, reason] = ['MS','Slow Push In','Câu hỏi hướng tới người xem — trung cảnh đẩy nhẹ tạo tương tác.'];
+        else if (len < 25)             [size, mv, reason] = ['CU','Static','Câu chốt ngắn, mạnh — cận cảnh tăng sức nặng.'];
+        else if (len > 70)             [size, mv, reason] = ['WS','Slow Pan Right','Câu dài nhiều thông tin — shot rộng kèm pan chậm giữ nhịp đọc.'];
+        else                           [size, mv, reason] = ['MS','Static','Câu tường thuật trung tính — trung cảnh là lựa chọn an toàn.'];
+
+        if (size === prev) {
+            const k = ALL_SIZES.indexOf(size);
+            size = k < ALL_SIZES.length - 1 ? ALL_SIZES[k+1] : ALL_SIZES[k-1];
+            reason += ` (Đổi cỡ cảnh để tránh trùng ${prev} liền trước.)`;
+        }
+        prev = size;
+
+        if (r.background) reason += ` Bối cảnh từ Tool 2: ${r.background}.`;
+
+        return { no: r.no, tc: r.tc, dur: r.dur, text: r.text,
+                 size, sizeLabel: size, mv,
+                 tr: r.dur < 3 ? 'Hard Cut' : (document.getElementById('cfgTransition')?.value || 'Smooth Cut'),
+                 ai: 60, reason, warn: r.dur > maxSec,
+                 character: r.character, background: r.background, sceneId: r.sceneId };
+    });
+
+    SHOTS.length = 0;
+    SHOTS.push(...shots);
+    renderTable(); renderTimeline(); renderMetrics();
+    selectRow(SHOTS[0].no);
+    scheduleAutoSave();
+    showToast(`Đã nhập ${shots.length} scene từ Tool 2 — giữ nguyên ID scene`);
+}
+
+function srcTab(name, btn) {
+    if (name === 'tool2') setTimeout(refreshTool2Status, 0);
+    ['paste','file','tool2'].forEach(n => document.getElementById('src-'+n).classList.add('hidden'));
+    document.getElementById('src-'+name).classList.remove('hidden');
+    document.querySelectorAll('.src-tab').forEach(b => {
+        b.classList.remove('border-accentOrange','text-accentOrange','font-medium');
+        b.classList.add('border-transparent','text-slate-400');
+    });
+    btn.classList.add('border-accentOrange','text-accentOrange','font-medium');
+    btn.classList.remove('border-transparent','text-slate-400');
+}
+
+/* ===== KHỞI ĐỘNG ===== */
+renderTable();
+renderTimeline();
+renderMetrics();
+selectRow(1);
+initProjectsList();
+loadProjectData(currentActiveProject);
+
+// Đổi cỡ cảnh / chuyển động trong bảng → tính lại metrics ngay
+document.addEventListener('change', e => {
+    const tr = e.target.closest('#shotTableBody tr');
+    if (!tr) return;
+    const s = SHOTS.find(x => x.no === +tr.dataset.no);
+    if (!s) return;
+    const sels = tr.querySelectorAll('select');
+    if (e.target === sels[0]) s.mv = e.target.value;
+    if (e.target === sels[1]) s.tr = e.target.value;
+    renderMetrics();
+}); updateEngineEstimate();
+</script>
+</body>
+</html>

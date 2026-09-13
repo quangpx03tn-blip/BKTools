@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Metadata - BK Tools</title>
+    <style>
+        :root {
+            --bg-main: #0b0f17;
+            --bg-sidebar: #111827;
+            --bg-card: #161e2e;
+            --border-color: #1f293d;
+            --accent-orange: #ff781f;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --input-bg: #0f131a;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- SIDEBAR STYLING --- */
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px 0;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .sidebar-top {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo-area {
+            padding: 0 20px 20px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .logo-title {
+            color: var(--accent-orange);
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            margin: 0;
+        }
+
+        .logo-sub {
+            color: var(--text-muted);
+            font-size: 11px;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .project-section {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .project-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .project-box {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .project-box span.color-dot {
+            width: 10px;
+            height: 10px;
+            background-color: var(--accent-orange);
+            border-radius: 2px;
+        }
+
+        .select-project {
+            width: 100%;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .btn {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-orange);
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .profile-status {
+            padding: 10px 20px;
+            font-size: 12px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .profile-status span {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            padding: 10px 0;
+            overflow-y: auto;
+        }
+
+        .nav-item {
+            padding: 10px 20px;
+            font-size: 13px;
+            color: var(--text-muted);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            transition: 0.2s;
+        }
+
+        .nav-item:hover {
+            color: var(--text-main);
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .nav-item.active {
+            color: var(--accent-orange);
+            border-left: 3px solid var(--accent-orange);
+            background-color: rgba(255, 120, 31, 0.05);
+            font-weight: 600;
+        }
+
+        .sidebar-footer {
+            padding: 15px 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .api-key-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .api-input-group {
+            display: flex;
+            gap: 6px;
+        }
+
+        .api-input {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 6px 8px;
+            color: var(--text-main);
+            font-size: 12px;
+            width: 100%;
+        }
+
+        .btn-save-key {
+            background-color: var(--accent-orange);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 0 10px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        /* --- MAIN CONTENT STYLING --- */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            background-color: var(--bg-main);
+        }
+
+        .content-header {
+            padding: 24px 30px 15px 30px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .content-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 4px 0;
+            color: var(--text-main);
+        }
+
+        .content-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .save-status-indicator {
+            font-size: 11px;
+            color: #48bb78;
+            background: rgba(72, 187, 120, 0.1);
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid rgba(72, 187, 120, 0.2);
+            transition: opacity 0.5s;
+        }
+
+        .content-body {
+            padding: 24px 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .card-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent-orange);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0;
+        }
+
+        label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            color: var(--text-main);
+            font-size: 13px;
+            box-sizing: border-box;
+            outline: none;
+            font-family: inherit;
+        }
+
+        textarea {
+            height: 130px;
+            resize: vertical;
+        }
+
+        input:focus, textarea:focus {
+            border-color: var(--accent-orange);
+        }
+
+        .btn-action {
+            background-color: var(--accent-orange);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 12px;
+            transition: 0.2s;
+        }
+
+        .btn-action:hover {
+            opacity: 0.9;
+        }
+
+        .preview-box {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #63b3ed;
+            min-height: 90px;
+            word-break: break-all;
+            margin-top: 6px;
+        }
+
+        .btn-sm {
+            background-color: rgba(255, 120, 31, 0.15);
+            color: var(--accent-orange);
+            border: 1px solid rgba(255, 120, 31, 0.3);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+            margin-top: 8px;
+            display: inline-block;
+        }
+        .btn-sm:hover {
+            background-color: var(--accent-orange);
+            color: white;
+        }
+
+        .btn-sm:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-action:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .title-option {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-size: 13px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: 0.15s;
+        }
+
+        .title-option:hover {
+            border-color: var(--accent-orange);
+        }
+
+        .title-option.selected {
+            border-color: var(--accent-orange);
+            background-color: rgba(255, 120, 31, 0.08);
+        }
+
+        .title-option .opt-tag {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--accent-orange);
+            border: 1px solid rgba(255, 120, 31, 0.4);
+            border-radius: 4px;
+            padding: 1px 6px;
+            margin-right: 8px;
+            text-transform: uppercase;
+        }
+
+        .spinner-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent-orange);
+            margin-right: 6px;
+            animation: pulse 0.9s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; transform: scale(0.85); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+
+        .status-error {
+            color: #f87171 !important;
+        }
+
+        .status-ok {
+            color: #48bb78 !important;
+        }
+
+        .lang-tab {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: 500;
+        }
+
+        .lang-tab:hover {
+            border-color: var(--accent-orange);
+            color: var(--text-main);
+        }
+
+        .lang-tab.active {
+            background-color: var(--accent-orange);
+            color: white;
+            border-color: var(--accent-orange);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="sidebar-top">
+            <div class="logo-area">
+                <h1 class="logo-title">BK TOOLS</h1>
+                <div class="logo-sub">Production Suite</div>
+            </div>
+
+            <div class="project-section">
+                <div class="project-label">Project</div>
+                <div class="project-box">
+                    <span class="color-dot"></span>
+                    <span>HH-Media tools</span>
+                </div>
+                <select class="select-project">
+                    <option>Default_Project</option>
+                </select>
+                <div class="btn-row">
+                    <button class="btn btn-primary">+ New</button>
+                    <button class="btn" onclick="autoSaveData()">💾 Save</button>
+                    <button class="btn">... More</button>
+                </div>
+            </div>
+
+            <div class="profile-status">
+                ACTIVE PROFILE <span>061</span>
+            </div>
+            <div style="padding: 4px 20px; font-size: 11px; color: var(--text-muted); font-style: italic;">
+                Chưa chọn profile
+            </div>
+
+            <div class="nav-menu">
+                <a href="/" class="nav-item">0 Topic Ideator</a>
+                <a href="/script_writer.html" class="nav-item">1 Script Writer</a>
+                <a href="/scene_breakdown.html" class="nav-item">2 Scene Breakdown</a>
+                <a href="/asset_prompts.html" class="nav-item">3 Asset Prompts</a>
+                <a href="/camera_movement.html" class="nav-item">4 Camera Movement</a>
+                <a href="/thumbnail.html" class="nav-item">5 Thumbnail</a>
+                <a href="/video_metadata.html" class="nav-item active">6 Video Metadata</a>
+                <a href="/upload_qc.html" class="nav-item">7 Upload QC</a>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="api-key-label">Gemini API Key</div>
+            <div class="api-input-group">
+                <input type="password" class="api-input" id="api-key-input" value="" placeholder="Nhập API Key...">
+                <button class="btn-save-key" onclick="saveApiKey()">Lưu</button>
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 6px;">
+                ● <span id="api-status">Trạng thái: Chưa cấu hình</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <div class="content-header">
+            <div>
+                <h2 class="content-title">Video Metadata & SEO Optimizer</h2>
+                <p class="content-desc">Tự động tối ưu hóa Tiêu đề chuẩn SEO, Đoạn mô tả chi tiết, Thẻ Tag và Hashtag cho YouTube.</p>
+            </div>
+            <div id="save-status" class="save-status-indicator">● Đã lưu ngầm tự động</div>
+        </div>
+
+        <div class="content-body">
+            <!-- Hàng trên: Input thông tin video -->
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header-row">
+                        <h3 class="card-title">1. Thông tin gốc video</h3>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label>Chủ đề / Tên nhân vật chính</label>
+                        <input type="text" id="meta-subject" value="" placeholder="Nhập chủ đề hoặc tên nhân vật chính..." oninput="autoSaveData()">
+                    </div>
+                    <div>
+                        <label>Tóm tắt nội dung chính</label>
+                        <textarea id="meta-summary" placeholder="Nhập tóm tắt nội dung chính của video..." oninput="autoSaveData()"></textarea>
+                    </div>
+                    <button class="btn-action" onclick="generateMetadata()">🤖 Tự động tạo Metadata SEO</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header-row">
+                        <h3 class="card-title">2. Cấu hình SEO & Kênh</h3>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label>Từ khóa chính (Primary Keyword)</label>
+                        <input type="text" id="meta-keyword" value="" placeholder="Nhập từ khóa chính, cách nhau bằng dấu phẩy..." oninput="autoSaveData()">
+                    </div>
+                    <div>
+                        <label>Kênh / Call-to-Action mặc định</label>
+                        <textarea id="meta-cta" placeholder="Nhập lời kêu gọi đăng ký kênh, hashtag mặc định..." oninput="autoSaveData()"></textarea>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label>Tông giọng nội dung</label>
+                        <select id="meta-tone" class="select-project" style="width:100%;" oninput="autoSaveData()">
+                            <option value="phat-phap">Phật pháp &amp; triết lý sống — nhẹ nhàng, sâu lắng, không giáo điều</option>
+                            <option value="doi-thuong">Đời thường, gần gũi, tâm sự</option>
+                            <option value="lich-su">Lịch sử, kiến thức, hào hùng</option>
+                            <option value="truyen-cam-hung">Truyền cảm hứng, tích cực, mạnh mẽ</option>
+                            <option value="khac">Khác / trung tính</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hàng dưới: Kết quả Tiêu đề, Mô tả và Tags -->
+            <div class="card">
+                <div class="card-header-row">
+                    <h3 class="card-title">3. Kết quả Metadata hoàn chỉnh</h3>
+                    <button class="btn-sm" onclick="downloadAllTxt()" style="background-color: var(--accent-orange); color: white; border: none;">📥 Tải xuống toàn bộ .txt</button>
+                </div>
+                <div id="meta-status" style="font-size:12px; color: var(--text-muted); margin-bottom: 4px; min-height: 16px;"></div>
+
+                <!-- Tab chọn ngôn ngữ đầu ra -->
+                <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color);">
+                    <label style="margin-bottom: 10px; display: block;">Chọn ngôn ngữ đầu ra (màu cam = đang chọn):</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        <button class="lang-tab active" data-lang="vi" onclick="changeLanguage('vi')">Tiếng Việt</button>
+                        <button class="lang-tab" data-lang="en" onclick="changeLanguage('en')">Tiếng Anh</button>
+                        <button class="lang-tab" data-lang="ko" onclick="changeLanguage('ko')">Tiếng Hàn</button>
+                        <button class="lang-tab" data-lang="zh" onclick="changeLanguage('zh')">Tiếng Trung</button>
+                        <button class="lang-tab" data-lang="ja" onclick="changeLanguage('ja')">Tiếng Nhật</button>
+                        <button class="lang-tab" data-lang="es" onclick="changeLanguage('es')">Tiếng Tây Ban Nha</button>
+                        <button class="lang-tab" data-lang="pt" onclick="changeLanguage('pt')">Tiếng Bồ Đào Nha</button>
+                        <button class="lang-tab" data-lang="de" onclick="changeLanguage('de')">Tiếng Đức</button>
+                        <button class="lang-tab" data-lang="fr" onclick="changeLanguage('fr')">Tiếng Pháp</button>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div>
+                        <label>Tiêu đề YouTube chuẩn SEO — chọn 1 trong 3 phương án AI đề xuất:</label>
+                        <div id="meta-title-options" style="display:flex; flex-direction:column; gap:8px;">
+                            <div class="preview-box" style="color: var(--text-muted); font-style: italic;">Chưa có kết quả. Bấm "Tự động tạo Metadata SEO" để bắt đầu.</div>
+                        </div>
+                        <div id="meta-title-output" style="display:none;"></div>
+                        <button class="btn-sm" onclick="copyText('meta-title-output', event)">✨ Copy Tiêu đề đã chọn</button>
+                    </div>
+                    <div>
+                        <label>Đoạn mô tả chi tiết (Description):</label>
+                        <div class="preview-box" id="meta-desc-output"></div>
+                        <button class="btn-sm" onclick="copyText('meta-desc-output', event)">✨ Copy Mô tả</button>
+                    </div>
+                    <div>
+                        <label>Thẻ Tags & Hashtags:</label>
+                        <div class="preview-box" id="meta-tags-output" style="min-height: 40px;"></div>
+                        <button class="btn-sm" onclick="copyText('meta-tags-output', event)">✨ Copy Tags</button>
+                    </div>
+                    <div>
+                        <label>Gợi ý cải thiện (SEO Coach):</label>
+                        <div class="preview-box" id="meta-tips-output" style="color:#f6c453; min-height: 40px;"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTitles = [];
+        let selectedTitleIndex = 0;
+        let isGenerating = false;
+        let currentLanguage = 'vi';
+
+        const TONE_GUIDES = {
+            'phat-phap': 'Giọng văn nhẹ nhàng, sâu lắng, gần gũi như đang tâm sự với một người bạn. Tuyệt đối không giáo điều, không phán xét, không dùng giọng "dạy đời". Có thể gợi mở một câu hỏi hoặc một khoảng lặng để người xem tự suy ngẫm.',
+            'doi-thuong': 'Giọng văn chân thật, gần gũi, như đang kể lại một câu chuyện đời thường cho bạn bè nghe. Tự nhiên, không màu mè.',
+            'lich-su': 'Giọng văn cuốn hút, giàu chi tiết, gợi không khí hào hùng hoặc bí ẩn của lịch sử, nhưng vẫn chính xác và tôn trọng sự thật.',
+            'truyen-cam-hung': 'Giọng văn tích cực, mạnh mẽ, tạo động lực, nhưng không sáo rỗng hay hô khẩu hiệu.',
+            'khac': 'Giọng văn trung tính, rõ ràng, chuyên nghiệp, phù hợp với nội dung phổ thông.'
+        };
+
+        // Tên ngôn ngữ hiển thị cho người dùng — thống nhất bằng tiếng Việt
+        const LANGUAGE_NAMES = {
+            'vi': 'Tiếng Việt',
+            'en': 'Tiếng Anh',
+            'ko': 'Tiếng Hàn',
+            'zh': 'Tiếng Trung',
+            'ja': 'Tiếng Nhật',
+            'es': 'Tiếng Tây Ban Nha',
+            'pt': 'Tiếng Bồ Đào Nha',
+            'de': 'Tiếng Đức',
+            'fr': 'Tiếng Pháp'
+        };
+
+        const i18n = {
+            vi: {
+                contentTitle: 'Video Metadata & SEO Optimizer',
+                contentDesc: 'Tự động tối ưu hóa Tiêu đề chuẩn SEO, Đoạn mô tả chi tiết, Thẻ Tag và Hashtag cho YouTube.',
+                card1Title: '1. Thông tin gốc video',
+                labelSubject: 'Chủ đề / Tên nhân vật chính',
+                placeholderSubject: 'Nhập chủ đề hoặc tên nhân vật chính...',
+                labelSummary: 'Tóm tắt nội dung chính',
+                placeholderSummary: 'Nhập tóm tắt nội dung chính của video...',
+                btnGenerate: '🤖 Tự động tạo Metadata SEO',
+                card2Title: '2. Cấu hình SEO & Kênh',
+                labelKeyword: 'Từ khóa chính (Primary Keyword)',
+                placeholderKeyword: 'Nhập từ khóa chính, cách nhau bằng dấu phẩy...',
+                labelCta: 'Kênh / Call-to-Action mặc định',
+                placeholderCta: 'Nhập lời kêu gọi đăng ký kênh, hashtag mặc định...',
+                labelTone: 'Tông giọng nội dung',
+                card3Title: '3. Kết quả Metadata hoàn chỉnh',
+                btnDownload: '📥 Tải xuống toàn bộ .txt',
+                labelTitles: 'Tiêu đề YouTube chuẩn SEO — chọn 1 trong 3 phương án AI đề xuất:',
+                btnCopyTitle: '✨ Copy Tiêu đề đã chọn',
+                labelDesc: 'Đoạn mô tả chi tiết (Description):',
+                btnCopyDesc: '✨ Copy Mô tả',
+                labelTags: 'Thẻ Tags & Hashtags:',
+                btnCopyTags: '✨ Copy Tags',
+                labelTips: 'Gợi ý cải thiện (SEO Coach):',
+                statusNothing: 'Chưa có kết quả. Bấm "Tự động tạo Metadata SEO" để bắt đầu.',
+                statusChoose: '✓ Đã tạo xong metadata. Bấm vào từng phương án tiêu đề để chọn phương án bạn thích nhất.'
+            },
+            en: {
+                contentTitle: 'Video Metadata & SEO Optimizer',
+                contentDesc: 'Automatically optimize SEO-standard titles, detailed descriptions, tags and hashtags for YouTube.',
+                card1Title: '1. Original Video Information',
+                labelSubject: 'Topic / Main Character Name',
+                placeholderSubject: 'Enter topic or main character name...',
+                labelSummary: 'Content Summary',
+                placeholderSummary: 'Enter the main content summary of the video...',
+                btnGenerate: '🤖 Auto-Generate Metadata SEO',
+                card2Title: '2. SEO & Channel Configuration',
+                labelKeyword: 'Primary Keyword',
+                placeholderKeyword: 'Enter primary keyword separated by commas...',
+                labelCta: 'Channel / Default Call-to-Action',
+                placeholderCta: 'Enter channel call-to-action or default hashtags...',
+                labelTone: 'Content Tone',
+                card3Title: '3. Complete Metadata Results',
+                btnDownload: '📥 Download all .txt',
+                labelTitles: 'YouTube Title (SEO Standard) — choose 1 of 3 AI suggestions:',
+                btnCopyTitle: '✨ Copy Selected Title',
+                labelDesc: 'Detailed Description:',
+                btnCopyDesc: '✨ Copy Description',
+                labelTags: 'Tags & Hashtags:',
+                btnCopyTags: '✨ Copy Tags',
+                labelTips: 'Improvement Tips (SEO Coach):',
+                statusNothing: 'No results yet. Click "Auto-Generate Metadata SEO" to start.',
+                statusChoose: '✓ Metadata created. Click each title option to select your preferred one.'
+            },
+            ko: {
+                contentTitle: '비디오 메타데이터 & SEO 최적화 도구',
+                contentDesc: 'SEO 표준 제목, 상세 설명, 태그 및 해시태그를 YouTube용으로 자동 최적화합니다.',
+                card1Title: '1. 원본 비디오 정보',
+                labelSubject: '주제 / 주요 캐릭터 이름',
+                placeholderSubject: '주제 또는 주요 캐릭터 이름 입력...',
+                labelSummary: '콘텐츠 요약',
+                placeholderSummary: '비디오의 주요 콘텐츠 요약 입력...',
+                btnGenerate: '🤖 메타데이터 자동 생성',
+                card2Title: '2. SEO & 채널 설정',
+                labelKeyword: '주요 키워드',
+                placeholderKeyword: '주요 키워드를 쉼표로 구분하여 입력...',
+                labelCta: '채널 / 기본 행동 유도',
+                placeholderCta: '채널 행동 유도 또는 기본 해시태그 입력...',
+                labelTone: '콘텐츠 톤',
+                card3Title: '3. 완성된 메타데이터 결과',
+                btnDownload: '📥 모두 .txt로 다운로드',
+                labelTitles: 'YouTube 제목 (SEO 표준) — AI 제안 3개 중 1개 선택:',
+                btnCopyTitle: '✨ 선택된 제목 복사',
+                labelDesc: '상세 설명:',
+                btnCopyDesc: '✨ 설명 복사',
+                labelTags: '태그 & 해시태그:',
+                btnCopyTags: '✨ 태그 복사',
+                labelTips: '개선 팁 (SEO 코치):',
+                statusNothing: '아직 결과가 없습니다. "메타데이터 자동 생성"을 클릭하여 시작하세요.',
+                statusChoose: '✓ 메타데이터가 생성되었습니다. 각 제목 옵션을 클릭하여 선호하는 제목을 선택하세요.'
+            }
+        };
+
+        const LANG_API_MAP = {
+            'vi': 'Vietnamese',
+            'en': 'English',
+            'ko': 'Korean',
+            'zh': 'Chinese',
+            'ja': 'Japanese',
+            'es': 'Spanish',
+            'pt': 'Portuguese',
+            'de': 'German',
+            'fr': 'French'
+        };
+
+        function changeLanguage(lang) {
+            if (!lang) return;
+            currentLanguage = lang;
+            localStorage.setItem('bk_meta_ui_language', lang);
+            updateUIText();
+            updateLanguageTabs();
+            // Điểm SEO và ngưỡng ký tự phụ thuộc ngôn ngữ -> phải chấm lại
+            if (currentTitles.length) renderTitleOptions();
+        }
+
+        function updateUIText() {
+            const t = i18n[currentLanguage] || i18n['vi'];
+            // Mọi truy cập DOM đều phải chịu được phần tử vắng mặt, nếu không
+            // một id bị đổi tên sẽ làm hỏng toàn bộ phần đổi ngôn ngữ.
+            const setText = (sel, val) => {
+                const el = document.querySelector(sel);
+                if (el && val) el.innerText = val;
+            };
+            const setPlaceholder = (id, val) => {
+                const el = document.getElementById(id);
+                if (el && val) el.placeholder = val;
+            };
+
+            setText('.content-title', t.contentTitle);
+            setText('.content-desc', t.contentDesc);
+
+            const cardTitles = document.querySelectorAll('.card-title');
+            if (cardTitles[0] && t.card1Title) cardTitles[0].innerText = t.card1Title;
+            if (cardTitles[1] && t.card2Title) cardTitles[1].innerText = t.card2Title;
+            if (cardTitles[2] && t.card3Title) cardTitles[2].innerText = t.card3Title;
+
+            setPlaceholder('meta-subject', t.placeholderSubject);
+            setPlaceholder('meta-summary', t.placeholderSummary);
+            setPlaceholder('meta-keyword', t.placeholderKeyword);
+            setPlaceholder('meta-cta', t.placeholderCta);
+
+            // Không ghi đè nhãn nút khi đang chạy, tránh mất chữ "Đang phân tích..."
+            if (!isGenerating) setText('.btn-action', t.btnGenerate);
+        }
+
+        function updateLanguageTabs() {
+            document.querySelectorAll('.lang-tab').forEach(tab => {
+                const lang = tab.dataset.lang;
+                if (!lang) return;
+                if (lang === currentLanguage) tab.classList.add('active');
+                else tab.classList.remove('active');
+            });
+        }
+
+        window.onload = function() {
+            const savedSubject = localStorage.getItem('bk_meta_subject');
+            const savedSummary = localStorage.getItem('bk_meta_summary');
+            const savedKeyword = localStorage.getItem('bk_meta_keyword');
+            const savedCta = localStorage.getItem('bk_meta_cta');
+            const savedTone = localStorage.getItem('bk_meta_tone');
+            const savedUILang = localStorage.getItem('bk_meta_ui_language') || 'vi';
+            const savedTitles = localStorage.getItem('bk_meta_titles');
+            const savedDesc = localStorage.getItem('bk_meta_description');
+            const savedTags = localStorage.getItem('bk_meta_tags');
+            const savedTip = localStorage.getItem('bk_meta_tip');
+
+            currentLanguage = savedUILang;
+            updateUIText();
+            updateLanguageTabs();
+
+            if (savedSubject) document.getElementById('meta-subject').value = savedSubject;
+            if (savedSummary) document.getElementById('meta-summary').value = savedSummary;
+            if (savedKeyword) document.getElementById('meta-keyword').value = savedKeyword;
+            if (savedCta) document.getElementById('meta-cta').value = savedCta;
+            if (savedTone) document.getElementById('meta-tone').value = savedTone;
+
+            if (savedTitles && savedDesc) {
+                currentTitles = JSON.parse(savedTitles);
+                renderTitleOptions();
+                document.getElementById('meta-desc-output').innerText = savedDesc || '';
+                document.getElementById('meta-tags-output').innerText = savedTags || '';
+                document.getElementById('meta-tips-output').innerText = savedTip || '';
+            }
+        };
+
+        function autoSaveData() {
+            localStorage.setItem('bk_meta_subject', document.getElementById('meta-subject').value);
+            localStorage.setItem('bk_meta_summary', document.getElementById('meta-summary').value);
+            localStorage.setItem('bk_meta_keyword', document.getElementById('meta-keyword').value);
+            localStorage.setItem('bk_meta_cta', document.getElementById('meta-cta').value);
+            localStorage.setItem('bk_meta_tone', document.getElementById('meta-tone').value);
+            localStorage.setItem('bk_meta_ui_language', currentLanguage);
+
+            const indicator = document.getElementById('save-status');
+            if (indicator) {
+                indicator.style.opacity = '1';
+                setTimeout(() => { indicator.style.opacity = '0.6'; }, 1200);
+            }
+        }
+
+        function autoSaveResults() {
+            localStorage.setItem('bk_meta_titles', JSON.stringify(currentTitles));
+            localStorage.setItem('bk_meta_description', document.getElementById('meta-desc-output').innerText);
+            localStorage.setItem('bk_meta_tags', document.getElementById('meta-tags-output').innerText);
+            localStorage.setItem('bk_meta_tip', document.getElementById('meta-tips-output').innerText);
+        }
+
+        function setStatus(msg, type) {
+            const el = document.getElementById('meta-status');
+            el.className = type === 'error' ? 'status-error' : (type === 'ok' ? 'status-ok' : '');
+            el.innerHTML = msg || '';
+        }
+
+        // Từ khóa "power word" theo từng ngôn ngữ — chấm điểm đúng với
+        // ngôn ngữ đang chọn, không mặc định tiếng Việt như trước.
+        const POWER_WORDS = {
+            vi: /(cách|tại sao|vì sao|bí mật|sự thật|hé lộ|bất ngờ|không ai|lý do|hướng dẫn|mới nhất)/i,
+            en: /(how|why|secret|truth|revealed|shocking|nobody|reason|guide|ultimate|best)/i,
+            ko: /(방법|이유|비밀|진실|공개|충격|최고|가이드|놀라운)/,
+            zh: /(如何|为什么|秘密|真相|揭秘|震惊|最佳|指南)/,
+            ja: /(方法|理由|秘密|真実|公開|衝撃|最高|ガイド)/,
+            es: /(cómo|por qué|secreto|verdad|revelado|mejor|guía)/i,
+            pt: /(como|por que|segredo|verdade|revelado|melhor|guia)/i,
+            de: /(wie|warum|geheimnis|wahrheit|enthüllt|beste|anleitung)/i,
+            fr: /(comment|pourquoi|secret|vérité|révélé|meilleur|guide)/i
+        };
+
+        // Ngôn ngữ không dùng dấu cách để tách từ -> đếm theo ký tự
+        const CJK_LANGS = ['zh', 'ja', 'ko'];
+
+        function calcSeoScore(title, lang) {
+            const t = (title || '').trim();
+            if (!t) return 0;
+
+            const L = lang || currentLanguage || 'vi';
+            const isCJK = CJK_LANGS.includes(L);
+            let score = 50;
+
+            // Độ dài tối ưu khác nhau giữa CJK (chữ đặc) và hệ Latin
+            const len = t.length;
+            if (isCJK) {
+                if (len >= 15 && len <= 35) score += 20;
+                else if (len > 35 && len <= 50) score += 10;
+            } else {
+                if (len >= 30 && len <= 60) score += 20;
+                else if (len > 60 && len <= 100) score += 10;
+            }
+
+            if (/\d/.test(t)) score += 10;
+            if ((POWER_WORDS[L] || POWER_WORDS.vi).test(t)) score += 10;
+
+            // Đếm "đơn vị từ" phù hợp từng hệ chữ
+            const wordCount = isCJK
+                ? Math.round(len / 2)
+                : t.split(/\s+/).filter(Boolean).length;
+            if (isCJK) {
+                if (wordCount >= 6 && wordCount <= 18) score += 10;
+            } else if (wordCount >= 3 && wordCount <= 12) {
+                score += 10;
+            }
+
+            return Math.min(score, 100);
+        }
+
+        // Ngưỡng ký tự hiển thị theo ngôn ngữ
+        function charLimitFor(lang) {
+            return CJK_LANGS.includes(lang || currentLanguage || 'vi') ? 50 : 100;
+        }
+
+        function getSeoColor(score) {
+            if (score >= 80) return '#48bb78';
+            if (score >= 60) return '#f6ad55';
+            return '#f87171';
+        }
+
+        function renderTitleOptions() {
+            const wrap = document.getElementById('meta-title-options');
+            if (!currentTitles.length) {
+                wrap.innerHTML = '<div class="preview-box" style="color: var(--text-muted); font-style: italic;">Chưa có kết quả. Bấm "Tự động tạo Metadata SEO" để bắt đầu.</div>';
+                return;
+            }
+            const limit = charLimitFor(currentLanguage);
+            const optimal = Math.round(limit * 0.6);
+            wrap.innerHTML = currentTitles.map((t, i) => {
+                const seoScore = calcSeoScore(t, currentLanguage);
+                const charLen = t.length;
+                const charStatus = charLen <= optimal ? '✓ Tối ưu' : charLen <= limit ? '⚠ OK' : '✗ Quá dài';
+                return `
+                <div class="title-option ${i === selectedTitleIndex ? 'selected' : ''}" onclick="selectTitle(${i})">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <span class="opt-tag">Phương án ${i + 1}</span>
+                        <span style="font-size: 11px; color: ${getSeoColor(seoScore)}; font-weight: 600;">SEO: ${seoScore}/100 | ${charLen}/${limit} ký tự (${charStatus})</span>
+                    </div>
+                    <div>${escapeHtml(t)}</div>
+                </div>
+            `}).join('');
+            document.getElementById('meta-title-output').innerText = currentTitles[selectedTitleIndex] || '';
+        }
+
+        function selectTitle(i) {
+            selectedTitleIndex = i;
+            renderTitleOptions();
+        }
+
+        function escapeHtml(str) {
+            const d = document.createElement('div');
+            d.innerText = str;
+            return d.innerHTML;
+        }
+
+        function downloadAllTxt() {
+            const title = document.getElementById('meta-title-output').innerText;
+            const desc = document.getElementById('meta-desc-output').innerText;
+            const tags = document.getElementById('meta-tags-output').innerText;
+            const subject = document.getElementById('meta-subject').value || 'video_metadata';
+
+            if (!title.trim()) {
+                setStatus('Chưa có metadata để tải xuống. Hãy tạo trước đã nhé.', 'error');
+                return;
+            }
+
+            const fileContent = `========================================\nTIÊU ĐỀ YOUTUBE (TITLE)\n========================================\n${title}\n\n========================================\nMÔ TẢ CHI TIẾT (DESCRIPTION)\n========================================\n${desc}\n\n========================================\nTHẺ TAGS & HASHTAGS\n========================================\n${tags}\n`;
+
+            const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${subject.replace(/[^a-zA-Z0-9à-ỹÀ-Ỹ ]/g, '').replace(/\s+/g, '_')}_metadata.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        async function generateMetadata() {
+            if (isGenerating) return;
+
+            // Ưu tiên key đang gõ ở sidebar, tránh bắt người dùng phải bấm "Lưu" trước
+            const typedKey = (document.getElementById('api-key-input') || {}).value || '';
+            const apiKey = typedKey.trim() || localStorage.getItem('bk_gemini_api_key') || '';
+            if (!apiKey) {
+                setStatus('⚠ Chưa có API Key. Hãy nhập API Key ở sidebar trước khi tạo metadata.', 'error');
+                return;
+            }
+
+            const subject = document.getElementById('meta-subject').value.trim();
+            const summary = document.getElementById('meta-summary').value.trim();
+            const keyword = document.getElementById('meta-keyword').value.trim();
+            const cta = document.getElementById('meta-cta').value.trim();
+            const tone = document.getElementById('meta-tone').value;
+
+            if (!subject && !summary) {
+                setStatus('Hãy nhập ít nhất Chủ đề hoặc Tóm tắt nội dung trước khi tạo.', 'error');
+                return;
+            }
+
+            isGenerating = true;
+            const actionBtn = document.querySelector('.btn-action');
+            const originalBtnText = actionBtn ? actionBtn.innerText : '';
+            if (actionBtn) {
+                actionBtn.disabled = true;
+                actionBtn.innerText = '⏳ Đang phân tích & viết metadata...';
+            }
+            setStatus('<span class="spinner-dot"></span>AI đang đọc nội dung và soạn metadata phù hợp...');
+
+            try {
+                const outputLanguage = LANG_API_MAP[currentLanguage] || 'Vietnamese';
+                const response = await fetch('/api/generate-metadata', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        api_key: apiKey,
+                        subject: subject,
+                        summary: summary,
+                        keyword: keyword,
+                        cta: cta,
+                        tone: tone,
+                        output_language: outputLanguage
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API lỗi: ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (data.status !== 'success') {
+                    throw new Error(data.message || 'Không thể tạo metadata.');
+                }
+
+                const result = data.data || {};
+                currentTitles = (result.titles || []).filter(t => t && t.trim());
+                if (!currentTitles.length) {
+                    currentTitles = [subject || summary || 'Nội dung video'];
+                }
+                selectedTitleIndex = 0;
+                renderTitleOptions();
+
+                document.getElementById('meta-desc-output').innerText = result.description || '';
+                document.getElementById('meta-tags-output').innerText = result.tags || '';
+                document.getElementById('meta-tips-output').innerText = result.tip ? `💡 ${result.tip}` : '';
+
+                setStatus('✓ Đã tạo xong metadata. Bấm vào từng phương án tiêu đề để chọn phương án bạn thích nhất.', 'ok');
+                autoSaveData();
+                autoSaveResults();
+            } catch (err) {
+                console.error('Lỗi tạo metadata:', err);
+                setStatus('⚠ ' + (err.message || 'Có lỗi khi tạo metadata. Vui lòng thử lại.'), 'error');
+            } finally {
+                isGenerating = false;
+                if (actionBtn) {
+                    actionBtn.disabled = false;
+                    actionBtn.innerText = originalBtnText;
+                }
+            }
+        }
+
+        async function copyText(elementId, evt) {
+            const el = document.getElementById(elementId);
+            const text = el ? el.innerText : '';
+            // Nút được gọi qua onclick nên nhận event qua tham số,
+            // không dựa vào window.event (đã deprecated, hỏng trên Firefox).
+            const btn = (evt && evt.currentTarget) || (window.event && window.event.target);
+
+            if (!text.trim()) {
+                setStatus('Chưa có nội dung để copy.', 'error');
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(text);
+            } catch (e) {
+                // Trình duyệt chặn clipboard (thường do không chạy HTTPS) -> fallback
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); }
+                catch (e2) { setStatus('Trình duyệt chặn clipboard. Hãy bôi đen và copy thủ công.', 'error'); }
+                ta.remove();
+            }
+
+            if (!btn) return;
+            const originalText = btn.innerText;
+            btn.innerText = "✓ Copied!";
+            btn.style.backgroundColor = "#48bb78";
+            btn.style.color = "white";
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.style.backgroundColor = "";
+                btn.style.color = "";
+            }, 1200);
+        }
+
+        function regenerateWithLanguage(langCode) {
+            if (langCode) changeLanguage(langCode);
+            autoSaveData();
+            generateMetadata();
+        }
+    </script>
+    <script src="/static/global-sync.js"></script>
+</body>
+</html>

@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload QC - BK Tools</title>
+    <style>
+        :root {
+            --bg-main: #0b0f17;
+            --bg-sidebar: #111827;
+            --bg-card: #161e2e;
+            --border-color: #1f293d;
+            --accent-orange: #ff781f;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --input-bg: #0f131a;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- SIDEBAR STYLING --- */
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px 0;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .sidebar-top {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo-area {
+            padding: 0 20px 20px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .logo-title {
+            color: var(--accent-orange);
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            margin: 0;
+        }
+
+        .logo-sub {
+            color: var(--text-muted);
+            font-size: 11px;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .project-section {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .project-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .project-box {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .project-box span.color-dot {
+            width: 10px;
+            height: 10px;
+            background-color: var(--accent-orange);
+            border-radius: 2px;
+        }
+
+        .select-project {
+            width: 100%;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .btn {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-orange);
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .profile-status {
+            padding: 10px 20px;
+            font-size: 12px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .profile-status span {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            padding: 10px 0;
+            overflow-y: auto;
+        }
+
+        .nav-item {
+            padding: 10px 20px;
+            font-size: 13px;
+            color: var(--text-muted);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            transition: 0.2s;
+        }
+
+        .nav-item:hover {
+            color: var(--text-main);
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .nav-item.active {
+            color: var(--accent-orange);
+            border-left: 3px solid var(--accent-orange);
+            background-color: rgba(255, 120, 31, 0.05);
+            font-weight: 600;
+        }
+
+        .sidebar-footer {
+            padding: 15px 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .api-key-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .api-input-group {
+            display: flex;
+            gap: 6px;
+        }
+
+        .api-input {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 6px 8px;
+            color: var(--text-main);
+            font-size: 12px;
+            width: 100%;
+        }
+
+        .btn-save-key {
+            background-color: var(--accent-orange);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 0 10px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        /* --- MAIN CONTENT STYLING --- */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            background-color: var(--bg-main);
+        }
+
+        .content-header {
+            padding: 24px 30px 15px 30px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .content-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 4px 0;
+            color: var(--text-main);
+        }
+
+        .content-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .save-status-indicator {
+            font-size: 11px;
+            color: #48bb78;
+            background: rgba(72, 187, 120, 0.1);
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid rgba(72, 187, 120, 0.2);
+            transition: opacity 0.5s;
+        }
+
+        .content-body {
+            padding: 24px 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .card-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent-orange);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0;
+        }
+
+        label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        input[type="text"], select, textarea {
+            width: 100%;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            color: var(--text-main);
+            font-size: 13px;
+            box-sizing: border-box;
+            outline: none;
+            font-family: inherit;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--accent-orange);
+        }
+
+        /* Checklist Items */
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+        }
+
+        .checklist-item:last-child {
+            border-bottom: none;
+        }
+
+        .checklist-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        input[type="checkbox"] {
+            accent-color: var(--accent-orange);
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .status-badge {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .badge-pending { background: rgba(236, 201, 75, 0.1); color: #ecc94b; }
+        .badge-passed { background: rgba(72, 187, 120, 0.1); color: #48bb78; }
+
+        .btn-action {
+            background-color: var(--accent-orange);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 15px;
+            transition: 0.2s;
+        }
+
+        .btn-action:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="sidebar-top">
+            <div class="logo-area">
+                <h1 class="logo-title">BK TOOLS</h1>
+                <div class="logo-sub">Production Suite</div>
+            </div>
+
+            <div class="project-section">
+                <div class="project-label">Project</div>
+                <div class="project-box">
+                    <span class="color-dot"></span>
+                    <span>HH-Media tools</span>
+                </div>
+                <select class="select-project">
+                    <option>Default_Project</option>
+                </select>
+                <div class="btn-row">
+                    <button class="btn btn-primary">+ New</button>
+                    <button class="btn" onclick="autoSaveData()">💾 Save</button>
+                    <button class="btn">... More</button>
+                </div>
+            </div>
+
+            <div class="profile-status">
+                ACTIVE PROFILE <span>061</span>
+            </div>
+            <div style="padding: 4px 20px; font-size: 11px; color: var(--text-muted); font-style: italic;">
+                Chưa chọn profile
+            </div>
+
+            <div class="nav-menu">
+                <a href="/" class="nav-item">0 Topic Ideator</a>
+                <a href="/script_writer.html" class="nav-item">1 Script Writer</a>
+                <a href="/scene_breakdown.html" class="nav-item">2 Scene Breakdown</a>
+                <a href="/asset_prompts.html" class="nav-item">3 Asset Prompts</a>
+                <a href="/camera_movement.html" class="nav-item">4 Camera Movement</a>
+                <a href="/thumbnail.html" class="nav-item">5 Thumbnail</a>
+                <a href="/video_metadata.html" class="nav-item">6 Video Metadata</a>
+                <a href="/upload_qc.html" class="nav-item active">7 Upload QC</a>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="api-key-label">Gemini API Key</div>
+            <div class="api-input-group">
+                <input type="password" class="api-input" value="AIzaSyA-xxxxxxxxxxxxxxxxxxxx">
+                <button class="btn-save-key">Lưu</button>
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 6px;">
+                ● Trạng thái: Đã cấu hình
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <div class="content-header">
+            <div>
+                <h2 class="content-title">Upload QC & Final Publish Checklist</h2>
+                <p class="content-desc">Kiểm duyệt chất lượng lần cuối, đồng bộ phụ đề, thiết lập trạng thái xuất bản và lưu trữ dự án.</p>
+            </div>
+            <div id="save-status" class="save-status-indicator">● Đã lưu ngầm tự động</div>
+        </div>
+
+        <div class="content-body">
+            <!-- Hàng trên: Checklist kiểm duyệt và Cấu hình xuất bản -->
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header-row">
+                        <h3 class="card-title">1. Checklist Kiểm duyệt chất lượng (QC)</h3>
+                    </div>
+                    <div>
+                        <div class="checklist-item">
+                            <label class="checklist-label">
+                                <input type="checkbox" id="qc-1" onchange="autoSaveData()"> Kiểm tra đồng bộ Hình ảnh & Âm thanh
+                            </label>
+                            <span class="status-badge badge-passed" id="badge-1">Đạt</span>
+                        </div>
+                        <div class="checklist-item">
+                            <label class="checklist-label">
+                                <input type="checkbox" id="qc-2" onchange="autoSaveData()"> Kiểm tra chính tả phụ đề (.srt / Subtitles)
+                            </label>
+                            <span class="status-badge badge-passed" id="badge-2">Đạt</span>
+                        </div>
+                        <div class="checklist-item">
+                            <label class="checklist-label">
+                                <input type="checkbox" id="qc-3" onchange="autoSaveData()"> Xác nhận phong cách đồ họa nhất quán (Characters & Backgrounds)
+                            </label>
+                            <span class="status-badge badge-passed" id="badge-3">Đạt</span>
+                        </div>
+                        <div class="checklist-item">
+                            <label class="checklist-label">
+                                <input type="checkbox" id="qc-4" onchange="autoSaveData()"> Kiểm tra bản quyền âm nhạc & âm thanh nền
+                            </label>
+                            <span class="status-badge badge-passed" id="badge-4">Đạt</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header-row">
+                        <h3 class="card-title">2. Cấu hình Nền tảng & Trạng thái</h3>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label>Nền tảng phát hành mục tiêu</label>
+                        <select id="qc-platform" onchange="autoSaveData()">
+                            <option value="YouTube">YouTube Channel (Full HD / 4K Cinematic)</option>
+                            <option value="TikTok">TikTok / Shorts (Vertical 9:16)</option>
+                            <option value="Facebook">Facebook Video Page</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label>Trạng thái xuất bản (Publish Status)</label>
+                        <select id="qc-status" onchange="autoSaveData()">
+                            <option value="Scheduled">Lên lịch công khai (Scheduled)</option>
+                            <option value="Private">Riêng tư / Chờ duyệt (Private)</option>
+                            <option value="Public">Công khai ngay lập tức (Public)</option>
+                        </select>
+                    </div>
+                    <button class="btn-action" onclick="finalizePublish()">🚀 Xác nhận hoàn tất & Lưu trữ Dự án</button>
+                </div>
+            </div>
+
+            <!-- Hàng dưới: Nhật ký ghi chú dự án -->
+            <div class="card">
+                <div class="card-header-row">
+                    <h3 class="card-title">3. Nhật ký ghi chú kiểm duyệt & Lưu trữ</h3>
+                </div>
+                <div>
+                    <label>Ghi chú kỹ thuật cho Editor / AI Pipeline</label>
+                    <textarea id="qc-notes" placeholder="Nhập các ghi chú lưu ý khi xuất bản video..." oninput="autoSaveData()">Dự án hoàn tất các bước từ Topic Ideator đến Upload QC. Đã sẵn sàng phát hành trên nền tảng YouTube.</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            document.getElementById('qc-1').checked = localStorage.getItem('bk_qc_1') === 'true';
+            document.getElementById('qc-2').checked = localStorage.getItem('bk_qc_2') === 'true';
+            document.getElementById('qc-3').checked = localStorage.getItem('bk_qc_3') === 'true';
+            document.getElementById('qc-4').checked = localStorage.getItem('bk_qc_4') === 'true';
+            
+            const savedPlatform = localStorage.getItem('bk_qc_platform');
+            const savedStatus = localStorage.getItem('bk_qc_status');
+            const savedNotes = localStorage.getItem('bk_qc_notes');
+
+            if (savedPlatform) document.getElementById('qc-platform').value = savedPlatform;
+            if (savedStatus) document.getElementById('qc-status').value = savedStatus;
+            if (savedNotes) document.getElementById('qc-notes').value = savedNotes;
+
+            updateBadges();
+        };
+
+        function autoSaveData() {
+            localStorage.setItem('bk_qc_1', document.getElementById('qc-1').checked);
+            localStorage.setItem('bk_qc_2', document.getElementById('qc-2').checked);
+            localStorage.setItem('bk_qc_3', document.getElementById('qc-3').checked);
+            localStorage.setItem('bk_qc_4', document.getElementById('qc-4').checked);
+            localStorage.setItem('bk_qc_platform', document.getElementById('qc-platform').value);
+            localStorage.setItem('bk_qc_status', document.getElementById('qc-status').value);
+            localStorage.setItem('bk_qc_notes', document.getElementById('qc-notes').value);
+
+            updateBadges();
+
+            const indicator = document.getElementById('save-status');
+            if (indicator) {
+                indicator.style.opacity = '1';
+                setTimeout(() => {
+                    indicator.style.opacity = '0.6';
+                }, 1200);
+            }
+        }
+
+        function updateBadges() {
+            for (let i = 1; i <= 4; i++) {
+                const checkbox = document.getElementById(`qc-${i}`);
+                const badge = document.getElementById(`badge-${i}`);
+                if (checkbox.checked) {
+                    badge.className = "status-badge badge-passed";
+                    badge.innerText = "Đạt";
+                } else {
+                    badge.className = "status-badge badge-pending";
+                    badge.innerText = "Chờ kiểm tra";
+                }
+            }
+        }
+
+        function finalizePublish() {
+            // Đánh dấu tất cả checkbox hoàn tất và lưu ngầm không dùng popup
+            for (let i = 1; i <= 4; i++) {
+                document.getElementById(`qc-${i}`).checked = true;
+            }
+            autoSaveData();
+        }
+    </script>
+    <script src="/static/global-sync.js"></script>
+</body>
+</html>

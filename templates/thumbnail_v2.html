@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BK Tools - Thumbnail CTR Optimizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        darkBg: '#0f1015', sidebarBg: '#14161f', cardBg: '#1b1e29',
+                        inputBg: '#14161f', accentOrange: '#ff7700',
+                        accentOrangeHover: '#e56b00', borderDark: '#2a2e3d'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f1015; }
+        ::-webkit-scrollbar-thumb { background: #2a2e3d; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #ff7700; }
+        .title-card { transition: all 0.2s; cursor: pointer; }
+        .title-card:hover { transform: translateY(-2px); }
+        .title-card.selected { box-shadow: 0 0 0 2px #ff7700; }
+    </style>
+</head>
+<body class="bg-darkBg text-gray-200 font-sans antialiased h-screen overflow-hidden flex m-0 p-0">
+
+<!-- SIDEBAR (giữ nguyên chuẩn hệ thống) -->
+<aside class="w-64 bg-sidebarBg border-r border-borderDark flex flex-col justify-between shrink-0 h-full">
+    <div>
+        <div class="p-4 border-b border-borderDark">
+            <div class="text-accentOrange font-extrabold tracking-wider text-lg">BK TOOLS</div>
+            <div class="text-[10px] text-gray-400 tracking-widest uppercase">PRODUCTION SUITE</div>
+        </div>
+        <div class="p-4 border-b border-borderDark space-y-3">
+            <div class="flex justify-between items-center">
+                <label class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Project</label>
+                <button id="syncBtn" class="border border-borderDark bg-cardBg hover:border-accentOrange text-[11px] px-2 py-1 rounded text-gray-300 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-bars-progress text-accentOrange text-[10px]"></i> HH-Media tools
+                </button>
+            </div>
+            <select id="projectSelect" class="w-full bg-inputBg border border-borderDark text-sm rounded px-3 py-2 appearance-none focus:outline-none focus:border-accentOrange text-gray-300">
+                <option>Default_Project</option>
+            </select>
+            <div class="flex gap-2">
+                <button onclick="newProject()" class="flex-1 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium"><i class="fa-solid fa-plus text-[10px]"></i> New</button>
+                <button onclick="saveProject()" class="flex-1 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium"><i class="fa-solid fa-floppy-disk text-[10px]"></i> Save</button>
+                <button class="px-3 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium">...</button>
+            </div>
+        </div>
+        <div class="px-4 py-3 border-b border-borderDark">
+            <div class="flex justify-between items-center text-xs mb-1">
+                <span class="text-gray-400 uppercase tracking-wider">Active Profile</span>
+                <span id="profileId" class="text-gray-500 font-mono">1f55</span>
+            </div>
+            <div id="profileName" class="text-sm text-emerald-400 font-semibold">미래산업 리포트</div>
+        </div>
+        <nav class="py-2 space-y-1">
+            <a href="/" class="flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 text-sm"><span class="w-6 text-xs text-gray-500">0</span> Topic Ideator</a>
+            <a href="/script_writer.html" class="flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 text-sm"><span class="w-6 text-xs text-gray-500">1</span> Script Writer</a>
+            <a href="/scene_breakdown.html" class="flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 text-sm"><span class="w-6 text-xs text-gray-500">2</span> Scene Breakdown</a>
+            <a href="/asset_prompts.html" class="flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 text-sm"><span class="w-6 text-xs text-gray-500">3</span> Asset Prompts</a>
+            <a href="/camera_movement.html" class="flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 text-sm"><span class="w-6 text-xs text-gray-500">4</span> Camera Movement</a>
+            <a href="/thumbnail.html" class="flex items-center px-4 py-2.5 bg-cardBg text-accentOrange border-r-4 border-accentOrange text-sm font-medium"><span class="w-6 text-xs text-gray-500">5</span> Thumbnail</a>
+            <a href="/video_metadata.html" class="flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 text-sm"><span class="w-6 text-xs text-gray-500">6</span> Video Metadata</a>
+            <a href="/upload_qc.html" class="flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 text-sm"><span class="w-6 text-xs text-gray-500">7</span> Upload QC</a>
+        </nav>
+    </div>
+    <div class="p-4 border-t border-borderDark space-y-3">
+        <div>
+            <label class="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">GEMINI API KEY</label>
+            <div class="flex gap-1">
+                <input type="password" id="apiKeyInput" placeholder="Nhập API Key..." class="w-full bg-inputBg border border-borderDark rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-accentOrange font-mono">
+                <button onclick="saveApiKey()" class="bg-accentOrange hover:bg-accentOrangeHover text-white text-xs px-3 py-1.5 rounded font-bold">Lưu</button>
+            </div>
+        </div>
+        <div class="flex items-center justify-between text-[11px]">
+            <span class="text-gray-500">Trạng thái:</span>
+            <span id="apiStatus" class="text-gray-400">✔ Chưa cấu hình</span>
+        </div>
+    </div>
+</aside>
+
+<!-- MAIN -->
+<main class="flex-1 flex flex-col h-screen overflow-hidden">
+    <!-- HEADER -->
+    <div class="flex justify-between items-center border-b border-borderDark px-6 py-3">
+        <div>
+            <h1 class="text-lg font-bold">Thumbnail CTR Optimizer</h1>
+            <p class="text-xs text-gray-400 mt-0.5">Thiết kế thumbnail tối ưu CTR: text overlay + composition + prompt sinh ảnh</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <!-- Language tabs -->
+            <div class="flex gap-1 text-[11px]">
+                <button onclick="setLang('vi')" data-lang="vi" class="lang-tab px-3 py-1 rounded border border-accentOrange bg-accentOrange/20 text-accentOrange font-medium">Tiếng Việt</button>
+                <button onclick="setLang('en')" data-lang="en" class="lang-tab px-3 py-1 rounded border border-transparent text-gray-400 hover:text-gray-200">English</button>
+                <button onclick="setLang('ko')" data-lang="ko" class="lang-tab px-3 py-1 rounded border border-transparent text-gray-400 hover:text-gray-200">한국어</button>
+                <button onclick="setLang('zh')" data-lang="zh" class="lang-tab px-3 py-1 rounded border border-transparent text-gray-400 hover:text-gray-200">中文</button>
+            </div>
+            <span class="bg-cardBg border border-borderDark text-xs px-3 py-1 rounded text-orange-400 font-semibold font-mono">Tool 5</span>
+        </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+
+        <!-- ① INPUT: tiêu đề video hoặc tóm tắt kịch bản -->
+        <div class="bg-cardBg border border-borderDark rounded-xl p-4">
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-xs text-orange-400 font-bold uppercase tracking-wider">| Nội dung cốt lõi</span>
+                <div class="flex gap-2 text-[11px]">
+                    <button onclick="switchInput('title')" id="btnTitle" class="px-3 py-1 rounded border-b-2 border-accentOrange text-accentOrange font-medium">Tiêu đề video</button>
+                    <button onclick="switchInput('script')" id="btnScript" class="px-3 py-1 rounded border-b-2 border-transparent text-gray-400">Tóm tắt kịch bản</button>
+                </div>
+            </div>
+            <div id="inputTitle">
+                <input id="videoTitle" type="text" placeholder="VD: Tại sao Hàn Quốc năm trong danh sách 5 quốc gia sống sót thời AI? — Hồ sơ bí giấu kín của Google"
+                    class="w-full bg-darkBg border border-borderDark rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-accentOrange">
+            </div>
+            <div id="inputScript" class="hidden">
+                <textarea id="scriptSummary" rows="4" placeholder="Dán tóm tắt kịch bản từ Tool 1 hoặc 2..."
+                    class="w-full bg-darkBg border border-borderDark rounded-lg px-4 py-3 text-sm resize-none focus:outline-none focus:border-accentOrange"></textarea>
+            </div>
+        </div>
+
+        <!-- ② AI GENERATE: 5 gợi ý tiêu đề thumbnail -->
+        <div class="bg-cardBg border border-borderDark rounded-xl p-4">
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-xs text-orange-400 font-bold uppercase tracking-wider">| 5 Gợi ý tiêu đề thumbnail (CTR-optimized)</span>
+                <button id="btnGenTitles" onclick="generateTitles()" class="bg-accentOrange hover:bg-accentOrangeHover text-white text-xs px-4 py-2 rounded font-semibold flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> <span id="genTitlesLabel">Tạo 5 gợi ý</span>
+                </button>
+            </div>
+            <div id="titlesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div class="col-span-full text-center py-8 text-sm text-gray-500">Bấm "Tạo 5 gợi ý" để AI phân tích và đề xuất tiêu đề tối ưu CTR</div>
+            </div>
+        </div>
+
+        <!-- ②.5 TIÊU ĐỀ THUMBNAIL CHỌN DÙNG (copy từ trên hoặc tự điền) -->
+        <div class="bg-gradient-to-r from-cyan-900/20 to-purple-900/20 border-2 border-cyan-600/40 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-2">
+                <i class="fa-solid fa-arrow-down text-cyan-400 text-sm"></i>
+                <span class="text-xs text-cyan-400 font-bold uppercase tracking-wider">Tiêu đề thumbnail (chọn từ trên hoặc tự điền)</span>
+            </div>
+            <input id="selectedTitleInput" type="text" placeholder="Click vào 1 trong 5 gợi ý bên trên để tự động điền, hoặc paste tiêu đề riêng của bạn..."
+                class="w-full bg-darkBg border-2 border-cyan-600/50 rounded-lg px-4 py-3 text-base font-semibold text-cyan-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500">
+            <div class="mt-2 text-[10px] text-slate-400">
+                <i class="fa-solid fa-lightbulb text-amber-400"></i>
+                AI sẽ phân tích tiêu đề này để gợi ý cấu trúc thumbnail (hình ảnh nổi bật, text overlay, composition)
+            </div>
+        </div>
+
+        <!-- ③ CẤU TRÚC THUMBNAIL: text overlay + composition -->
+        <div class="bg-cardBg border border-borderDark rounded-xl p-4">
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-xs text-orange-400 font-bold uppercase tracking-wider">| Cấu trúc thumbnail</span>
+                <button id="btnAnalyze" onclick="analyzeStructure()" class="bg-cyan-600 hover:bg-cyan-700 text-white text-xs px-4 py-2 rounded font-semibold flex items-center gap-2">
+                    <i class="fa-solid fa-brain text-[10px]"></i> <span id="analyzeLabel">Phân tích cấu trúc</span>
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-1.5 font-semibold">Hình ảnh nổi bật</label>
+                    <textarea id="focusNote" rows="3" placeholder="AI sẽ gợi ý sau khi bấm 'Phân tích cấu trúc'"
+                        class="w-full bg-darkBg border border-borderDark rounded px-3 py-2 text-xs resize-none focus:outline-none focus:border-accentOrange"></textarea>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-1.5 font-semibold">Text overlay trên thumbnail</label>
+                    <textarea id="textNote" rows="3" placeholder="VD: 'Hàn Quốc' (lớn, nổi bật), '5 quốc gia' (phụ, nhỏ hơn)"
+                        class="w-full bg-darkBg border border-borderDark rounded px-3 py-2 text-xs resize-none focus:outline-none focus:border-accentOrange"></textarea>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-1.5 font-semibold">Vị trí / Composition</label>
+                    <textarea id="layoutNote" rows="3" placeholder="VD: Subject bên trái, text bên phải, rule of thirds"
+                        class="w-full bg-darkBg border border-borderDark rounded px-3 py-2 text-xs resize-none focus:outline-none focus:border-accentOrange"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- ④ REFERENCE IMAGE (tùy chọn) -->
+        <div class="bg-cardBg border border-borderDark rounded-xl p-4">
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-xs text-orange-400 font-bold uppercase tracking-wider">| Ảnh tham chiếu (tùy chọn)</span>
+                <label for="refImageInput" class="bg-gray-700 hover:bg-gray-600 text-white text-xs px-4 py-2 rounded font-semibold cursor-pointer flex items-center gap-2">
+                    <i class="fa-solid fa-image text-[10px]"></i> Tải ảnh lên
+                </label>
+                <input id="refImageInput" type="file" accept="image/*" onchange="handleImageUpload(event)" class="hidden">
+            </div>
+            <div id="refImagePreview" class="hidden flex items-center gap-3 p-3 bg-darkBg border border-borderDark rounded-lg">
+                <img id="refImageThumb" class="w-24 h-24 object-cover rounded" />
+                <div class="flex-1 text-xs text-gray-400">
+                    <div id="refImageName" class="font-mono text-gray-300 mb-1"></div>
+                    <div class="text-[10px]">AI sẽ phân tích composition, màu sắc, góc máy từ ảnh này</div>
+                </div>
+                <button onclick="clearRefImage()" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="refImagePlaceholder" class="text-center py-6 text-sm text-gray-500">
+                Tải ảnh tham chiếu lên để AI học cách bố cục, màu sắc, font chữ từ thumbnail mẫu
+            </div>
+        </div>
+
+        <!-- ⑤ PROMPT CUỐI CÙNG -->
+        <div class="bg-cardBg border border-borderDark rounded-xl p-4">
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-xs text-orange-400 font-bold uppercase tracking-wider">| Prompt sinh ảnh thumbnail</span>
+                <div class="flex gap-2">
+                    <button onclick="buildPrompt()" class="bg-purple-600 hover:bg-purple-700 text-white text-xs px-4 py-2 rounded font-semibold flex items-center gap-2">
+                        <i class="fa-solid fa-puzzle-piece text-[10px]"></i> Ghép prompt
+                    </button>
+                    <button onclick="copyPrompt()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-4 py-2 rounded font-semibold flex items-center gap-2">
+                        <i class="fa-solid fa-copy text-[10px]"></i> Copy
+                    </button>
+                </div>
+            </div>
+            <div id="promptMeta" class="flex flex-wrap gap-2 mb-2"></div>
+            <div id="compositionNote" class="hidden mb-2 bg-cyan-950/20 border border-cyan-700/40 rounded-lg p-3">
+                <div class="text-[10px] uppercase tracking-wider text-cyan-400 font-semibold mb-1">
+                    <i class="fa-solid fa-eye"></i> AI học được gì từ ảnh tham chiếu
+                </div>
+                <div data-note class="text-xs text-slate-300 leading-relaxed"></div>
+            </div>
+            <div class="bg-darkBg border border-borderDark rounded-lg p-4 font-mono text-xs text-slate-300 leading-relaxed max-h-64 overflow-y-auto">
+                <div id="finalPrompt" class="whitespace-pre-wrap">Bấm "Ghép prompt" để tổng hợp: 3 cấu trúc thumbnail + ảnh tham chiếu + Active Profile → prompt sinh ảnh có sẵn dòng tiêu đề in cứng trong ảnh.</div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script src="/static/global-sync.js"></script>
+<script>
+let currentLang = 'vi';
+let selectedTitleIndex = null;
+let refImageBase64 = '';
+
+function setLang(lang) {
+    currentLang = lang;
+    document.querySelectorAll('.lang-tab').forEach(b => {
+        b.classList.remove('border-accentOrange','bg-accentOrange/20','text-accentOrange','font-medium');
+        b.classList.add('border-transparent','text-gray-400');
+    });
+    event.target.classList.add('border-accentOrange','bg-accentOrange/20','text-accentOrange','font-medium');
+    event.target.classList.remove('border-transparent','text-gray-400');
+}
+
+function switchInput(mode) {
+    if (mode === 'title') {
+        document.getElementById('inputTitle').classList.remove('hidden');
+        document.getElementById('inputScript').classList.add('hidden');
+        document.getElementById('btnTitle').classList.add('border-accentOrange','text-accentOrange','font-medium');
+        document.getElementById('btnTitle').classList.remove('border-transparent','text-gray-400');
+        document.getElementById('btnScript').classList.remove('border-accentOrange','text-accentOrange','font-medium');
+        document.getElementById('btnScript').classList.add('border-transparent','text-gray-400');
+    } else {
+        document.getElementById('inputTitle').classList.add('hidden');
+        document.getElementById('inputScript').classList.remove('hidden');
+        document.getElementById('btnScript').classList.add('border-accentOrange','text-accentOrange','font-medium');
+        document.getElementById('btnScript').classList.remove('border-transparent','text-gray-400');
+        document.getElementById('btnTitle').classList.remove('border-accentOrange','text-accentOrange','font-medium');
+        document.getElementById('btnTitle').classList.add('border-transparent','text-gray-400');
+    }
+}
+
+async function generateTitles() {
+    const videoTitle = document.getElementById('videoTitle').value.trim();
+    const scriptSummary = document.getElementById('scriptSummary').value.trim();
+    const apiKey = document.getElementById('apiKeyInput').value.trim();
+
+    if (!videoTitle && !scriptSummary) {
+        toast('Vui lòng nhập tiêu đề video hoặc tóm tắt kịch bản', true);
+        return;
+    }
+    if (!apiKey) {
+        toast('Chưa có API Key', true);
+        return;
+    }
+
+    const btn = document.getElementById('btnGenTitles');
+    const label = document.getElementById('genTitlesLabel');
+    btn.disabled = true;
+    label.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Đang tạo...';
+
+    try {
+        const res = await fetch('/api/generate-thumbnail-titles', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                video_title: videoTitle,
+                script_summary: scriptSummary,
+                api_key: apiKey,
+                output_lang: currentLang
+            })
+        });
+        const json = await res.json();
+        if (json.status !== 'success') throw new Error(json.message);
+
+        const titles = json.data.titles || [];
+        GENERATED_TITLES = titles;      // giữ lại để lưu / khôi phục
+        selectedTitleIndex = null;
+        renderTitles(titles);
+        saveThumbData(true);
+        toast(`Đã tạo ${titles.length} gợi ý tiêu đề`);
+    } catch (e) {
+        toast('Lỗi: ' + e.message, true);
+    } finally {
+        btn.disabled = false;
+        label.textContent = 'Tạo 5 gợi ý';
+    }
+}
+
+function renderTitles(titles) {
+    const grid = document.getElementById('titlesGrid');
+    if (!titles.length) {
+        grid.innerHTML = '<div class="col-span-full text-center py-4 text-sm text-gray-500">Không có gợi ý nào</div>';
+        return;
+    }
+    grid.innerHTML = titles.map((t, i) => `
+        <div onclick="selectTitle(${i})" data-idx="${i}"
+            class="title-card bg-darkBg border border-borderDark rounded-lg p-3 hover:border-accentOrange/50">
+            <div class="text-xs text-slate-400 mb-1 font-mono">#${i+1}</div>
+            <div class="text-sm font-semibold text-slate-200 leading-snug">${t}</div>
+        </div>
+    `).join('');
+}
+
+function selectTitle(idx) {
+    selectedTitleIndex = idx;
+    document.querySelectorAll('.title-card').forEach((c, i) => {
+        c.classList.toggle('selected', i === idx);
+    });
+    // Copy tiêu đề xuống ô "Tiêu đề thumbnail" bên dưới
+    const card = document.querySelectorAll('.title-card')[idx];
+    const title = card?.querySelector('.text-sm')?.textContent?.trim() || '';
+    const input = document.getElementById('selectedTitleInput');
+    if (input && title) {
+        input.value = title;
+        // Nháy viền để người dùng thấy ô vừa được điền
+        input.classList.add('ring-2', 'ring-cyan-400');
+        setTimeout(() => input.classList.remove('ring-2', 'ring-cyan-400'), 700);
+    }
+    saveThumbData(true);
+}
+
+// Lấy tiêu đề đang dùng: ưu tiên ô nhập tay, không có thì lấy card đang chọn
+function getWorkingTitle() {
+    const typed = document.getElementById('selectedTitleInput')?.value.trim();
+    if (typed) return typed;
+    if (selectedTitleIndex == null) return '';
+    return document.querySelectorAll('.title-card')[selectedTitleIndex]
+        ?.querySelector('.text-sm')?.textContent?.trim() || '';
+}
+
+async function analyzeStructure() {
+    const selectedTitle = getWorkingTitle();
+    if (!selectedTitle) {
+        toast('Hãy chọn 1 gợi ý hoặc tự điền tiêu đề thumbnail', true);
+        document.getElementById('selectedTitleInput')?.focus();
+        return;
+    }
+    const apiKey = document.getElementById('apiKeyInput').value.trim();
+    if (!apiKey) { toast('Chưa có API Key', true); return; }
+
+    const videoTitle = document.getElementById('videoTitle').value.trim();
+
+    const btn = document.getElementById('btnAnalyze');
+    const label = document.getElementById('analyzeLabel');
+    btn.disabled = true;
+    label.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Đang phân tích...';
+
+    try {
+        const res = await fetch('/api/analyze-thumbnail-structure', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                video_title: videoTitle,
+                selected_title: selectedTitle,
+                api_key: apiKey,
+                output_lang: currentLang
+            })
+        });
+        const json = await res.json();
+        if (json.status !== 'success') throw new Error(json.message);
+
+        // Backend trả: image_position (hình ảnh & vị trí), text_fonts (chữ overlay), color_emotion (màu & cảm xúc)
+        const d = json.data || {};
+        document.getElementById('focusNote').value  = d.color_emotion  || '';
+        document.getElementById('textNote').value   = d.text_fonts     || '';
+        document.getElementById('layoutNote').value = d.image_position || '';
+        saveThumbData(true);
+        toast('Đã phân tích cấu trúc thumbnail');
+    } catch (e) {
+        toast('Lỗi: ' + e.message, true);
+    } finally {
+        btn.disabled = false;
+        label.textContent = 'Phân tích cấu trúc';
+    }
+}
+
+function handleImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        refImageBase64 = reader.result;
+        document.getElementById('refImageThumb').src = refImageBase64;
+        document.getElementById('refImageName').textContent = file.name;
+        document.getElementById('refImagePreview').classList.remove('hidden');
+        document.getElementById('refImagePlaceholder').classList.add('hidden');
+        saveThumbData(true);
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearRefImage() {
+    refImageBase64 = '';
+    document.getElementById('refImageInput').value = '';
+    document.getElementById('refImagePreview').classList.add('hidden');
+    document.getElementById('refImagePlaceholder').classList.remove('hidden');
+}
+
+async function buildPrompt() {
+    const selectedTitle = getWorkingTitle();
+    if (!selectedTitle) {
+        toast('Chưa có tiêu đề thumbnail — chọn 1 gợi ý hoặc tự điền', true);
+        document.getElementById('selectedTitleInput')?.focus();
+        return;
+    }
+    const apiKey = document.getElementById('apiKeyInput').value.trim();
+    if (!apiKey) { toast('Chưa có API Key', true); return; }
+
+    // Bắt buộc có đủ 3 cấu trúc trước khi ghép
+    const layout = document.getElementById('layoutNote').value.trim();
+    const textSty = document.getElementById('textNote').value.trim();
+    const colorEmo = document.getElementById('focusNote').value.trim();
+    const missing = [];
+    if (!layout)   missing.push('Vị trí / Composition');
+    if (!textSty)  missing.push('Text overlay');
+    if (!colorEmo) missing.push('Màu sắc & Cảm xúc');
+    if (missing.length) {
+        toast('Thiếu: ' + missing.join(', ') + ' — bấm "Phân tích cấu trúc" trước', true);
+        document.getElementById('btnAnalyze')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+
+    const out = document.getElementById('finalPrompt');
+    out.textContent = 'Đang phân tích cấu trúc' + (refImageBase64 ? ' + ảnh tham chiếu' : '') + ' và ghép prompt…';
+
+    try {
+        const res = await fetch('/api/build-thumbnail-prompt-ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                api_key: apiKey,
+                selected_title: selectedTitle,
+                // Chuỗi chữ BẮT BUỘC render cứng trong ảnh
+                subtitle: selectedTitle,
+                video_title: document.getElementById('videoTitle').value.trim(),
+                script_summary: document.getElementById('scriptSummary').value.trim(),
+                image_position: layout,
+                text_style: textSty,
+                color_emotion: colorEmo,
+                image_base64: refImageBase64,
+                output_lang: currentLang
+            })
+        });
+        const json = await res.json();
+        if (json.status !== 'success') throw new Error(json.message);
+
+        const d = json.data || {};
+        out.textContent = d.prompt || 'Không có prompt';
+        renderPromptMeta(d);
+
+        // Hiện ghi chú bố cục — bằng chứng AI đã thực sự đọc ảnh tham chiếu
+        const noteBox = document.getElementById('compositionNote');
+        if (noteBox) {
+            if (d.composition_note) {
+                noteBox.classList.remove('hidden');
+                noteBox.querySelector('[data-note]').textContent = d.composition_note;
+            } else {
+                noteBox.classList.add('hidden');
+            }
+        }
+
+        saveThumbData(true);
+        toast(d.used_image
+            ? 'Đã đọc ảnh tham chiếu + 3 cấu trúc → ghép prompt xong'
+            : 'Đã ghép prompt (không có ảnh tham chiếu)');
+    } catch (e) {
+        out.textContent = 'Lỗi: ' + e.message;
+        toast('Lỗi: ' + e.message, true);
+    }
+}
+
+// Hiển thị badge: nguồn nào đã được dùng để ghép prompt
+function renderPromptMeta(d) {
+    const host = document.getElementById('promptMeta');
+    if (!host) return;
+    const chip = (ok, label) =>
+        `<span class="px-2 py-1 rounded text-[10px] border ${ok
+            ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300'
+            : 'bg-slate-700/30 border-slate-600/40 text-slate-400'}">
+            <i class="fa-solid ${ok ? 'fa-check' : 'fa-minus'} text-[8px]"></i> ${label}
+        </span>`;
+
+    host.innerHTML =
+        chip(true, '3 cấu trúc thumbnail') +
+        chip(!!d.used_image, d.used_image ? 'Đã đọc ảnh tham chiếu' : 'Không có ảnh tham chiếu') +
+        chip(!!d.used_profile, 'Active Profile style') +
+        (d.overlay_text
+            ? `<span class="px-2 py-1 rounded text-[10px] border bg-cyan-500/10 border-cyan-500/40 text-cyan-300">
+                 <i class="fa-solid fa-font text-[8px]"></i> Chữ in trong ảnh: "${d.overlay_text}"
+               </span>`
+            : '');
+}
+
+function copyPrompt() {
+    const p = document.getElementById('finalPrompt').textContent;
+    navigator.clipboard.writeText(p);
+    toast('Đã copy prompt');
+}
+
+function toast(msg, err) {
+    const t = document.createElement('div');
+    t.className = 'fixed bottom-5 right-5 text-xs px-4 py-2.5 rounded-lg shadow-xl z-50 ' +
+        (err ? 'bg-red-900/80 border border-red-600 text-red-200' : 'bg-emerald-900/80 border border-emerald-600 text-emerald-200');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2600);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LƯU / KHÔI PHỤC DỮ LIỆU THEO PROJECT
+   Key: bk_thumbnail_data_<tên project> — cùng pattern Tool 2 / Tool 4
+   ══════════════════════════════════════════════════════════════ */
+
+let currentProject = localStorage.getItem('bk_last_active_project') || 'Default_Project';
+let saveTimer = null;
+
+// Danh sách 5 gợi ý đang hiển thị (để khôi phục lại lưới)
+let GENERATED_TITLES = [];
+
+function collectThumbState() {
+    return {
+        videoTitle:     document.getElementById('videoTitle')?.value || '',
+        scriptSummary:  document.getElementById('scriptSummary')?.value || '',
+        selectedTitle:  document.getElementById('selectedTitleInput')?.value || '',
+        titles:         GENERATED_TITLES,
+        selectedIndex:  selectedTitleIndex,
+        focusNote:      document.getElementById('focusNote')?.value || '',
+        textNote:       document.getElementById('textNote')?.value || '',
+        layoutNote:     document.getElementById('layoutNote')?.value || '',
+        finalPrompt:    document.getElementById('finalPrompt')?.textContent || '',
+        promptMeta:     document.getElementById('promptMeta')?.innerHTML || '',
+        compositionNote: document.getElementById('compositionNote')?.querySelector('[data-note]')?.textContent || '',
+        refImage:       refImageBase64,
+        refImageName:   document.getElementById('refImageName')?.textContent || '',
+        lang:           currentLang,
+        inputMode:      document.getElementById('inputScript')?.classList.contains('hidden') ? 'title' : 'script',
+        savedAt:        Date.now()
+    };
+}
+
+function saveThumbData(silent) {
+    try {
+        localStorage.setItem(
+            `bk_thumbnail_data_${currentProject}`,
+            JSON.stringify(collectThumbState())
+        );
+        if (!silent) toast(`Đã lưu dự án [${currentProject}]`);
+    } catch (e) {
+        // localStorage đầy thường do ảnh base64 quá lớn
+        toast('Lỗi lưu: ' + e.message + ' (ảnh tham chiếu có thể quá nặng)', true);
+    }
+}
+
+function loadThumbData(projName) {
+    const raw = localStorage.getItem(`bk_thumbnail_data_${projName}`);
+    if (!raw) return;
+    let d;
+    try { d = JSON.parse(raw); } catch (e) { return; }
+
+    const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
+
+    set('videoTitle', d.videoTitle);
+    set('scriptSummary', d.scriptSummary);
+    set('selectedTitleInput', d.selectedTitle);
+    set('focusNote', d.focusNote);
+    set('textNote', d.textNote);
+    set('layoutNote', d.layoutNote);
+
+    // Khôi phục lưới 5 gợi ý + ô đang chọn
+    if (Array.isArray(d.titles) && d.titles.length) {
+        GENERATED_TITLES = d.titles;
+        renderTitles(d.titles);
+        if (d.selectedIndex != null && d.selectedIndex > -1) {
+            selectedTitleIndex = d.selectedIndex;
+            document.querySelectorAll('.title-card').forEach((c, i) =>
+                c.classList.toggle('selected', i === d.selectedIndex));
+        }
+    }
+
+    // Khôi phục prompt cuối + badge + ghi chú bố cục
+    if (d.finalPrompt) {
+        const out = document.getElementById('finalPrompt');
+        if (out) out.textContent = d.finalPrompt;
+    }
+    if (d.promptMeta) {
+        const meta = document.getElementById('promptMeta');
+        if (meta) meta.innerHTML = d.promptMeta;
+    }
+    if (d.compositionNote) {
+        const box = document.getElementById('compositionNote');
+        if (box) {
+            box.classList.remove('hidden');
+            box.querySelector('[data-note]').textContent = d.compositionNote;
+        }
+    }
+
+    // Khôi phục ảnh tham chiếu
+    if (d.refImage) {
+        refImageBase64 = d.refImage;
+        const thumb = document.getElementById('refImageThumb');
+        const name  = document.getElementById('refImageName');
+        if (thumb) thumb.src = d.refImage;
+        if (name)  name.textContent = d.refImageName || 'reference.jpg';
+        document.getElementById('refImagePreview')?.classList.remove('hidden');
+        document.getElementById('refImagePlaceholder')?.classList.add('hidden');
+    }
+
+    // Khôi phục ngôn ngữ
+    if (d.lang) {
+        currentLang = d.lang;
+        document.querySelectorAll('.lang-tab').forEach(b => {
+            const on = b.dataset.lang === d.lang;
+            b.classList.toggle('border-accentOrange', on);
+            b.classList.toggle('bg-accentOrange/20', on);
+            b.classList.toggle('text-accentOrange', on);
+            b.classList.toggle('font-medium', on);
+            b.classList.toggle('border-transparent', !on);
+            b.classList.toggle('text-gray-400', !on);
+        });
+    }
+
+    // Khôi phục tab nhập liệu
+    if (d.inputMode === 'script') {
+        switchInput('script');
+    }
+}
+
+function initProjects() {
+    const projects = JSON.parse(localStorage.getItem('bk_projects_list') || '["Default_Project"]');
+    if (!projects.includes(currentProject)) currentProject = projects[0];
+    const dd = document.getElementById('projectSelect');
+    if (!dd) return;
+    dd.innerHTML = '<option value="__new__">+ New Project…</option>' +
+        projects.map(p => `<option value="${p}"${p === currentProject ? ' selected' : ''}>${p}</option>`).join('');
+    dd.onchange = function () {
+        if (this.value === '__new__') { this.value = currentProject; newProject(); return; }
+        if (this.value === currentProject) return;
+        saveThumbData(true);
+        currentProject = this.value;
+        localStorage.setItem('bk_last_active_project', currentProject);
+        clearThumbWorkspace();
+        loadThumbData(currentProject);
+        toast(`Đã mở project: ${currentProject}`);
+    };
+}
+
+function clearThumbWorkspace() {
+    ['videoTitle','scriptSummary','selectedTitleInput','focusNote','textNote','layoutNote']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    GENERATED_TITLES = [];
+    selectedTitleIndex = null;
+    document.getElementById('titlesGrid').innerHTML =
+        '<div class="col-span-full text-center py-8 text-sm text-gray-500">Bấm "Tạo 5 gợi ý" để AI phân tích và đề xuất tiêu đề tối ưu CTR</div>';
+    document.getElementById('finalPrompt').textContent =
+        'Bấm "Ghép prompt" để tổng hợp: 3 cấu trúc thumbnail + ảnh tham chiếu + Active Profile → prompt sinh ảnh có sẵn dòng tiêu đề in cứng trong ảnh.';
+    document.getElementById('promptMeta').innerHTML = '';
+    document.getElementById('compositionNote')?.classList.add('hidden');
+    clearRefImage();
+}
+
+function newProject() {
+    const name = (prompt('Tên project mới:') || '').trim();
+    if (!name) return;
+    const projects = JSON.parse(localStorage.getItem('bk_projects_list') || '["Default_Project"]');
+    if (projects.includes(name)) { toast(`Project "${name}" đã tồn tại!`, true); return; }
+    saveThumbData(true);
+    projects.push(name);
+    localStorage.setItem('bk_projects_list', JSON.stringify(projects));
+    currentProject = name;
+    localStorage.setItem('bk_last_active_project', name);
+    initProjects();
+    clearThumbWorkspace();
+    saveThumbData(true);
+    toast(`Đã tạo project: ${name}`);
+}
+
+function saveProject() { saveThumbData(false); }
+
+function saveApiKey() {
+    const key = document.getElementById('apiKeyInput')?.value.trim() || '';
+    if (!key) { toast('Chưa nhập API Key', true); return; }
+    localStorage.setItem('bk_gemini_api_key', key);
+    const st = document.getElementById('apiStatus');
+    if (st) { st.textContent = '✔ Đã cấu hình'; st.className = 'text-emerald-400'; }
+    toast('Đã lưu API Key');
+}
+
+// Auto-save 1.2s sau thay đổi cuối + lưu khi rời trang / chuyển tab
+function scheduleThumbSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => saveThumbData(true), 1200);
+}
+
+document.addEventListener('input',  e => { if (e.target.closest('main')) scheduleThumbSave(); });
+document.addEventListener('change', e => { if (e.target.closest('main')) scheduleThumbSave(); });
+window.addEventListener('beforeunload', () => saveThumbData(true));
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') saveThumbData(true);
+});
+
+/* ===== KHỞI ĐỘNG ===== */
+(function initThumbnailTool() {
+    // Nạp API key đã lưu
+    const savedKey = localStorage.getItem('bk_gemini_api_key');
+    if (savedKey) {
+        const inp = document.getElementById('apiKeyInput');
+        if (inp) inp.value = savedKey;
+        const st = document.getElementById('apiStatus');
+        if (st) { st.textContent = '✔ Đã cấu hình'; st.className = 'text-emerald-400'; }
+    }
+    initProjects();
+    loadThumbData(currentProject);
+})();
+</script>
+</body>
+</html>

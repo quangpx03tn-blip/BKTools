@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BK Tools Production Suite - Asset Prompt Generator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- JSZip: nén ảnh thành file .zip ngay trên trình duyệt -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body {
+            background-color: #0f1117;
+            color: #d1d5db;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f1117;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden" onload="initPage()">
+
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="w-64 bg-[#141721] border-r border-gray-800 flex flex-col justify-between flex-shrink-0">
+        <div>
+            <!-- Logo / Brand -->
+            <div class="p-5 border-b border-gray-800">
+                <h1 class="text-orange-500 font-bold tracking-wider text-lg">BK TOOLS</h1>
+                <p class="text-xs text-gray-400 tracking-wide">PRODUCTION SUITE</p>
+            </div>
+
+            <!-- Project Selector -->
+            <div class="p-4 border-b border-gray-800">
+                <label class="block text-xs font-medium text-gray-400 mb-1">PROJECT</label>
+                <div class="flex items-center justify-between bg-[#1f2430] px-3 py-2 rounded-md border border-gray-700 text-sm">
+                    <span class="text-orange-400 font-medium">🟧 HH-Media tools</span>
+                </div>
+                <div class="mt-2">
+                    <select class="w-full bg-[#1f2430] border border-gray-700 text-sm rounded-md px-3 py-2 focus:outline-none focus:border-orange-500 text-gray-200">
+                        <option>Default_Project</option>
+                    </select>
+                </div>
+                <div class="flex gap-2 mt-2">
+                    <button class="flex-1 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold py-1.5 rounded transition">+ New</button>
+                    <button class="flex-1 bg-[#252b3b] hover:bg-[#32394c] text-gray-200 text-xs font-semibold py-1.5 rounded transition">💾 Save</button>
+                    <button class="px-3 bg-[#252b3b] hover:bg-[#32394c] text-gray-200 text-xs font-semibold py-1.5 rounded transition">... More</button>
+                </div>
+            </div>
+
+            <!-- Active Profile -->
+            <div class="px-4 py-3 border-b border-gray-800 text-xs">
+                <div class="flex justify-between text-gray-400">
+                    <span>ACTIVE PROFILE</span>
+                    <span>061</span>
+                </div>
+                <div class="text-gray-500 italic mt-0.5">Chưa chọn profile</div>
+            </div>
+
+            <!-- Menu List -->
+            <nav class="p-2 space-y-1 text-sm">
+                <a href="/" class="flex items-center px-3 py-2 text-gray-400 hover:bg-[#1f2430] rounded transition">
+                    <span class="w-6 text-gray-500 font-mono">0</span> Topic Ideator
+                </a>
+                <a href="/script_writer.html" class="flex items-center px-3 py-2 text-gray-400 hover:bg-[#1f2430] rounded transition">
+                    <span class="w-6 text-gray-500 font-mono">1</span> Script Writer
+                </a>
+                <a href="/scene_breakdown.html" class="flex items-center px-3 py-2 text-gray-400 hover:bg-[#1f2430] rounded transition">
+                    <span class="w-6 text-gray-500 font-mono">2</span> Scene Breakdown
+                </a>
+                <a href="/asset_prompts.html" class="flex items-center px-3 py-2 bg-[#1f2430] text-orange-400 font-medium rounded border-l-2 border-orange-500">
+                    <span class="w-6 text-orange-400 font-mono">3</span> Asset Prompts
+                </a>
+                <a href="/camera_movement.html" class="flex items-center px-3 py-2 text-gray-400 hover:bg-[#1f2430] rounded transition">
+                    <span class="w-6 text-gray-500 font-mono">4</span> Camera Movement
+                </a>
+                <a href="/thumbnail.html" class="flex items-center px-3 py-2 text-gray-400 hover:bg-[#1f2430] rounded transition">
+                    <span class="w-6 text-gray-500 font-mono">5</span> Thumbnail
+                </a>
+                <a href="/video_metadata.html" class="flex items-center px-3 py-2 text-gray-400 hover:bg-[#1f2430] rounded transition">
+                    <span class="w-6 text-gray-500 font-mono">6</span> Video Metadata
+                </a>
+                <a href="/upload_qc.html" class="flex items-center px-3 py-2 text-gray-400 hover:bg-[#1f2430] rounded transition">
+                    <span class="w-6 text-gray-500 font-mono">7</span> Upload QC
+                </a>
+            </nav>
+        </div>
+
+        <!-- Gemini API Key Footer -->
+        <div class="p-4 border-t border-gray-800 bg-[#11131a]">
+            <label class="block text-xs font-medium text-gray-400 mb-1">GEMINI API KEY</label>
+            <div class="flex gap-2">
+                <input type="password" id="sidebarApiKeyInput" value="" placeholder="Nhập API Key..." class="w-full bg-[#1f2430] border border-gray-700 text-xs rounded px-2 py-1.5 text-gray-300 focus:outline-none" />
+                <button id="sidebarSaveKeyBtn" class="bg-orange-600 hover:bg-orange-700 text-white text-xs px-3 py-1.5 rounded font-medium transition cursor-pointer">Lưu</button>
+            </div>
+            <div class="flex items-center gap-1.5 mt-2 text-xs text-gray-500">
+                <span id="apiKeyStatusDot">○</span> <span id="apiKeyStatusText">Trạng thái: Chưa cấu hình</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 flex flex-col overflow-y-auto bg-[#0f1117]">
+        
+        <!-- Top Header -->
+        <header class="p-6 border-b border-gray-800 bg-[#141721]/50">
+            <h2 class="text-xl font-bold text-white tracking-wide">Asset Prompt Generator</h2>
+            <p class="text-xs text-gray-400 mt-1">Tạo G-Labs prompts cho character reference sheets và background reference sheets</p>
+        </header>
+
+        <!-- Main Form Body -->
+        <div class="p-6 space-y-6 w-full pb-12">
+
+            <!-- Row 1: Configurations -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Visual Style</label>
+                    <select id="visualStyle" onchange="saveToolData()" class="w-full bg-[#141721] border border-gray-700 text-sm rounded-md px-3 py-2 text-gray-200 focus:outline-none focus:border-orange-500">
+                        <option>Custom (edit below)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Channel Description</label>
+                    <input type="text" id="channelDesc" value="" oninput="scheduleAutosave()" placeholder="Nhập mô tả kênh..." class="w-full bg-[#141721] border border-gray-700 text-sm rounded-md px-3 py-2 text-gray-200 focus:outline-none focus:border-orange-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Video Topic</label>
+                    <input type="text" id="videoTopic" value="" oninput="scheduleAutosave()" placeholder="Nhập chủ đề video..." class="w-full bg-[#141721] border border-gray-700 text-sm rounded-md px-3 py-2 text-gray-200 focus:outline-none focus:border-orange-500">
+                </div>
+            </div>
+
+            <!-- Row 2: Style Prompts Box -->
+            <div class="bg-[#141721] border border-gray-800 rounded-lg p-4 relative">
+                <div class="flex justify-between items-center mb-3 border-b border-gray-800 pb-2">
+                    <span class="text-xs font-bold text-orange-500 tracking-wider flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-orange-500 inline-block"></span> STYLE PROMPTS (EDITABLE)
+                    </span>
+                    <div class="flex items-center gap-3 text-xs">
+                        <span id="autosaveStatus" class="text-[10px] text-gray-500 italic"></span>
+                        <button type="button" onclick="resetToolData()" class="text-gray-400 hover:text-red-400 transition">Reset</button>
+                        <button type="button" onclick="saveToolData(true)" class="text-orange-400 hover:text-orange-300 transition font-medium">Save Custom</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="bg-[#10131a] p-3 rounded border border-gray-800/60">
+                        <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Character Style</h4>
+                        <textarea id="charStyle" data-no-global-sync="true" rows="3" oninput="scheduleAutosave()" placeholder="Nhập character style..." class="w-full bg-transparent text-xs text-gray-300 resize-none focus:outline-none leading-relaxed"></textarea>
+                    </div>
+                    <div class="bg-[#10131a] p-3 rounded border border-gray-800/60">
+                        <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Background Style</h4>
+                        <textarea id="bgStyle" data-no-global-sync="true" rows="3" oninput="scheduleAutosave()" placeholder="Nhập background style..." class="w-full bg-transparent text-xs text-gray-300 resize-none focus:outline-none leading-relaxed"></textarea>
+                    </div>
+                </div>
+
+                <div class="mt-4 bg-[#10131a] p-3 rounded border border-gray-800/60">
+                    <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Scene Style <span class="text-gray-500 font-normal lowercase">(prompt ngắn cho Tool 2 - Nano Banana Pro)</span></h4>
+                    <textarea id="sceneStyle" data-no-global-sync="true" rows="2" oninput="scheduleAutosave()" placeholder="Nhập scene style..." class="w-full bg-transparent text-xs text-gray-300 resize-none focus:outline-none leading-relaxed"></textarea>
+                </div>
+            </div>
+
+            <!-- Row 3: Characters & Backgrounds Lists (mô tả text) -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <!-- CHARACTERS BOX -->
+                <div class="bg-[#141721] border border-gray-800 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-xs font-bold text-orange-500 tracking-wider flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-orange-500 inline-block"></span> CHARACTERS
+                        </span>
+                    </div>
+                    <textarea id="characterListContainer" rows="6" oninput="scheduleAutosave()" placeholder="Danh sách nhân vật tự động nạp từ Tool 2, hoặc bạn có thể chỉnh sửa thủ công mà không sợ mất dữ liệu cũ..." class="w-full bg-[#10131a] border border-gray-800/60 rounded p-3 min-h-[100px] text-xs text-gray-200 font-mono leading-relaxed resize-y focus:outline-none focus:border-orange-500/50"></textarea>
+                </div>
+
+                <!-- BACKGROUNDS BOX -->
+                <div class="bg-[#141721] border border-gray-800 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-xs font-bold text-orange-500 tracking-wider flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-orange-500 inline-block"></span> BACKGROUNDS
+                        </span>
+                    </div>
+                    <textarea id="backgroundListContainer" rows="6" oninput="scheduleAutosave()" placeholder="Danh sách bối cảnh tự động nạp từ Tool 2, hoặc bạn có thể chỉnh sửa thủ công mà không sợ mất dữ liệu cũ..." class="w-full bg-[#10131a] border border-gray-800/60 rounded p-3 min-h-[100px] text-xs text-gray-200 font-mono leading-relaxed resize-y focus:outline-none focus:border-orange-500/50"></textarea>
+                </div>
+            </div>
+
+            <!-- Row 4: Upload ảnh Nhân vật & Bối cảnh -> tự động đổi tên theo thứ tự -> Download ZIP -->
+            <div class="bg-[#141721] border border-gray-800 rounded-lg p-4">
+                <div class="flex flex-wrap justify-between items-center gap-3 mb-1">
+                    <span class="text-xs font-bold text-orange-500 tracking-wider flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-orange-500 inline-block"></span> ẢNH NHÂN VẬT &amp; BỐI CẢNH
+                    </span>
+                    <button id="downloadZipBtn" onclick="downloadImagesZip()" disabled
+                        class="bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white text-xs font-semibold px-4 py-2 rounded-lg transition flex items-center gap-2 shadow-sm">
+                        <span>📦</span> Download ZIP
+                        <span id="zipCountBadge" class="bg-black/25 px-1.5 py-0.5 rounded text-[10px] font-mono">0</span>
+                    </button>
+                </div>
+                <p class="text-xs text-gray-400 mb-4">
+                    Upload nhiều ảnh cùng lúc (ảnh được sắp theo tên file A→Z) → hệ thống tự động đổi tên lần lượt thành
+                    <span class="text-orange-400 font-mono">CHARACTERS_001, CHARACTERS_002...</span> và
+                    <span class="text-orange-400 font-mono">BACKGROUNDS_001, BACKGROUNDS_002...</span> → bấm
+                    <span class="text-emerald-400 font-medium">Download ZIP</span> để tải trọn bộ về máy.
+                </p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <!-- Upload khu vực Characters -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[11px] font-bold text-gray-300 uppercase tracking-wider">👤 Ảnh Characters</span>
+                            <div class="flex items-center gap-2">
+                                <span id="charImgCount" class="text-[10px] text-gray-500 font-mono">0 ảnh</span>
+                                <button type="button" onclick="event.stopPropagation(); document.getElementById('charImgInput').click()" class="text-[11px] bg-[#1f2430] hover:bg-[#2c3447] text-orange-400 border border-orange-500/30 px-2.5 py-1 rounded transition flex items-center gap-1">
+                                    <span>📤 Upload</span>
+                                </button>
+                                <button type="button" onclick="clearImages('characters')" class="text-[11px] text-gray-500 hover:text-red-400 transition">Xóa hết</button>
+                            </div>
+                        </div>
+                        <input type="file" id="charImgInput" accept="image/*" multiple class="hidden" onchange="handleImageUpload(event, 'characters')">
+                        <div id="charImgDropzone"
+                            ondrop="handleImageDrop(event, 'characters')"
+                            ondragover="event.preventDefault(); this.classList.add('border-orange-500', 'bg-orange-500/5')"
+                            ondragleave="this.classList.remove('border-orange-500', 'bg-orange-500/5')"
+                            onclick="document.getElementById('charImgInput').click()"
+                            class="border-2 border-dashed border-gray-700 rounded-lg p-3 min-h-[120px] bg-[#10131a] transition cursor-pointer hover:border-orange-500/50">
+                            <div id="charImgGrid" class="grid grid-cols-3 sm:grid-cols-4 gap-2"></div>
+                            <div id="charImgEmptyHint" class="text-center text-[11px] text-gray-600 py-8">🖼️ Kéo-thả ảnh vào đây hoặc bấm Upload</div>
+                        </div>
+                    </div>
+
+                    <!-- Upload khu vực Backgrounds -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[11px] font-bold text-gray-300 uppercase tracking-wider">🖼️ Ảnh Backgrounds</span>
+                            <div class="flex items-center gap-2">
+                                <span id="bgImgCount" class="text-[10px] text-gray-500 font-mono">0 ảnh</span>
+                                <button type="button" onclick="event.stopPropagation(); document.getElementById('bgImgInput').click()" class="text-[11px] bg-[#1f2430] hover:bg-[#2c3447] text-orange-400 border border-orange-500/30 px-2.5 py-1 rounded transition flex items-center gap-1">
+                                    <span>📤 Upload</span>
+                                </button>
+                                <button type="button" onclick="clearImages('backgrounds')" class="text-[11px] text-gray-500 hover:text-red-400 transition">Xóa hết</button>
+                            </div>
+                        </div>
+                        <input type="file" id="bgImgInput" accept="image/*" multiple class="hidden" onchange="handleImageUpload(event, 'backgrounds')">
+                        <div id="bgImgDropzone"
+                            ondrop="handleImageDrop(event, 'backgrounds')"
+                            ondragover="event.preventDefault(); this.classList.add('border-orange-500', 'bg-orange-500/5')"
+                            ondragleave="this.classList.remove('border-orange-500', 'bg-orange-500/5')"
+                            onclick="document.getElementById('bgImgInput').click()"
+                            class="border-2 border-dashed border-gray-700 rounded-lg p-3 min-h-[120px] bg-[#10131a] transition cursor-pointer hover:border-orange-500/50">
+                            <div id="bgImgGrid" class="grid grid-cols-3 sm:grid-cols-4 gap-2"></div>
+                            <div id="bgImgEmptyHint" class="text-center text-[11px] text-gray-600 py-8">🖼️ Kéo-thả ảnh vào đây hoặc bấm Upload</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Action Buttons -->
+            <div class="flex items-center gap-4 pt-2">
+                <button onclick="generateAllPrompts()" class="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium text-xs px-6 py-3 rounded-lg shadow-lg transition flex items-center gap-2 cursor-pointer">
+                    <span>⚡</span> Generate All Prompts
+                </button>
+                <button class="bg-[#1b202d] hover:bg-[#252c3d] text-gray-200 font-medium text-xs px-5 py-3 rounded-lg border border-gray-700 transition flex items-center gap-2">
+                    <span>🍄</span> Style Reference
+                </button>
+            </div>
+
+            <!-- KẾT QUẢ: THANH TAB NGANG -->
+            <div id="resultsSection" class="hidden bg-[#141721] border border-gray-800 rounded-lg shadow-xl mt-6 overflow-hidden">
+                <div class="flex bg-[#10131a] border-b border-gray-800 px-4 pt-2 gap-1 overflow-x-auto">
+                    <button id="tabCharBtn" onclick="switchTab('characters')" class="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-orange-400 border-b-2 border-orange-500 bg-[#141721]/60 transition flex items-center gap-2">
+                        <span>👤</span> CHARACTERS
+                    </button>
+                    <button id="tabBgBtn" onclick="switchTab('backgrounds')" class="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white transition flex items-center gap-2">
+                        <span>🖼️</span> BACKGROUNDS
+                    </button>
+                    <button id="tabStyleBtn" onclick="switchTab('styleRef')" class="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white transition flex items-center gap-2">
+                        <span>🍄</span> STYLE REFERENCE
+                    </button>
+                </div>
+
+                <!-- Nội dung Tab Characters -->
+                <div id="tabCharContent" class="p-5 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-semibold text-orange-400">Prompts cho Nhân vật:</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="downloadTxt('charOutputText', 'character_prompts.txt')" class="text-[11px] bg-[#1f2430] hover:bg-[#2c3447] text-orange-400 border border-orange-500/30 px-3 py-1 rounded transition flex items-center gap-1">📥 Tải .txt</button>
+                            <button onclick="copyContent('charOutputText')" class="text-[11px] bg-[#1f2430] hover:bg-[#2c3447] text-gray-300 border border-gray-700 px-3 py-1 rounded transition">📋 Copy tất cả</button>
+                        </div>
+                    </div>
+                    <textarea id="charOutputText" rows="10" readonly class="w-full bg-[#10131a] border border-gray-800 rounded p-3 text-xs text-gray-300 font-mono focus:outline-none"></textarea>
+                </div>
+
+                <!-- Nội dung Tab Backgrounds -->
+                <div id="tabBgContent" class="p-5 space-y-3 hidden">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-semibold text-orange-400">Prompts cho Bối cảnh:</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="downloadTxt('bgOutputText', 'background_prompts.txt')" class="text-[11px] bg-[#1f2430] hover:bg-[#2c3447] text-orange-400 border border-orange-500/30 px-3 py-1 rounded transition flex items-center gap-1">📥 Tải .txt</button>
+                            <button onclick="copyContent('bgOutputText')" class="text-[11px] bg-[#1f2430] hover:bg-[#2c3447] text-gray-300 border border-gray-700 px-3 py-1 rounded transition">📋 Copy tất cả</button>
+                        </div>
+                    </div>
+                    <textarea id="bgOutputText" rows="10" readonly class="w-full bg-[#10131a] border border-gray-800 rounded p-3 text-xs text-gray-300 font-mono focus:outline-none"></textarea>
+                </div>
+
+                <!-- Nội dung Tab Style Reference -->
+                <div id="tabStyleContent" class="p-5 space-y-3 hidden">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-semibold text-orange-400">Prompts cho Style Reference (Có thể chỉnh sửa hoặc nhập prompt vào đây):</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="downloadTxt('styleOutputText', 'style_reference_prompts.txt')" class="text-[11px] bg-[#1f2430] hover:bg-[#2c3447] text-orange-400 border border-orange-500/30 px-3 py-1 rounded transition flex items-center gap-1">📥 Tải .txt</button>
+                            <button onclick="copyContent('styleOutputText')" class="text-[11px] bg-[#1f2430] hover:bg-[#2c3447] text-gray-300 border border-gray-700 px-3 py-1 rounded transition">📋 Copy tất cả</button>
+                        </div>
+                    </div>
+                    <textarea id="styleOutputText" rows="10" oninput="scheduleAutosave()" placeholder="Nhập hoặc dán Style Reference prompts vào đây..." class="w-full bg-[#10131a] border border-gray-800 rounded p-3 text-xs text-gray-300 font-mono focus:outline-none focus:border-orange-500/50 resize-y"></textarea>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- JavaScript xử lý nạp dữ liệu riêng biệt & kết nối API Tool 3 -->
+    <script>
+        let latestTool2Data = null;
+
+        // ====== LƯU / KHÔI PHỤC / RESET DỮ LIỆU TOOL 3 (localStorage) ======
+        const TOOL3_STORAGE_KEY = 'bk_asset_prompts_data';
+        let autosaveTimer = null;
+
+        function scheduleAutosave() {
+            clearTimeout(autosaveTimer);
+            autosaveTimer = setTimeout(() => saveToolData(), 500);
+        }
+
+        function collectToolData() {
+            return {
+                visualStyle: document.getElementById('visualStyle').value,
+                channelDesc: document.getElementById('channelDesc').value,
+                videoTopic: document.getElementById('videoTopic').value,
+                charStyle: document.getElementById('charStyle').value,
+                bgStyle: document.getElementById('bgStyle').value,
+                sceneStyle: document.getElementById('sceneStyle').value,
+                characterListContainer: document.getElementById('characterListContainer').value,
+                backgroundListContainer: document.getElementById('backgroundListContainer').value,
+                charOutputText: document.getElementById('charOutputText').value,
+                bgOutputText: document.getElementById('bgOutputText').value,
+                styleOutputText: document.getElementById('styleOutputText').value,
+                resultsVisible: !document.getElementById('resultsSection').classList.contains('hidden'),
+                updatedAt: new Date().toISOString()
+            };
+        }
+
+        function saveToolData(showStatus) {
+            const data = collectToolData();
+            try {
+                localStorage.setItem(TOOL3_STORAGE_KEY, JSON.stringify(data));
+                setAutosaveStatus(`✔ Đã lưu lúc ${new Date(data.updatedAt).toLocaleTimeString('vi-VN')}`, showStatus);
+            } catch (e) {
+                setAutosaveStatus('⚠ Lỗi khi lưu dữ liệu', true);
+            }
+        }
+
+        function setAutosaveStatus(text, keepVisible) {
+            const el = document.getElementById('autosaveStatus');
+            if (!el) return;
+            el.innerText = text;
+            clearTimeout(setAutosaveStatus._t);
+            const duration = keepVisible ? 3000 : 2000;
+            setAutosaveStatus._t = setTimeout(() => { el.innerText = ''; }, duration);
+        }
+
+        function loadToolData() {
+            let data = null;
+            try {
+                data = JSON.parse(localStorage.getItem(TOOL3_STORAGE_KEY));
+            } catch (e) {}
+            if (!data) return;
+
+            if (data.visualStyle) document.getElementById('visualStyle').value = data.visualStyle;
+            document.getElementById('channelDesc').value = data.channelDesc || '';
+            document.getElementById('videoTopic').value = data.videoTopic || '';
+            document.getElementById('charStyle').value = data.charStyle || '';
+            document.getElementById('bgStyle').value = data.bgStyle || '';
+            document.getElementById('sceneStyle').value = data.sceneStyle || '';
+            document.getElementById('characterListContainer').value = data.characterListContainer || '';
+            document.getElementById('backgroundListContainer').value = data.backgroundListContainer || '';
+            document.getElementById('charOutputText').value = data.charOutputText || '';
+            document.getElementById('bgOutputText').value = data.bgOutputText || '';
+            document.getElementById('styleOutputText').value = data.styleOutputText || '';
+            if (data.resultsVisible && (data.charOutputText || data.bgOutputText || data.styleOutputText)) {
+                document.getElementById('resultsSection').classList.remove('hidden');
+            }
+        }
+
+        function resetToolData() {
+            if (!confirm('Xóa toàn bộ dữ liệu đã nhập ở Tool 3 (Style Prompts, Characters, Backgrounds, kết quả đã gen)? Hành động này không thể hoàn tác.')) {
+                return;
+            }
+            localStorage.removeItem(TOOL3_STORAGE_KEY);
+
+            document.getElementById('channelDesc').value = '';
+            document.getElementById('videoTopic').value = '';
+            document.getElementById('charStyle').value = '';
+            document.getElementById('bgStyle').value = '';
+            document.getElementById('sceneStyle').value = '';
+            document.getElementById('characterListContainer').value = '';
+            document.getElementById('backgroundListContainer').value = '';
+            document.getElementById('charOutputText').value = '';
+            document.getElementById('bgOutputText').value = '';
+            document.getElementById('styleOutputText').value = '';
+            document.getElementById('resultsSection').classList.add('hidden');
+
+            setAutosaveStatus('🗑 Đã reset về mặc định', true);
+        }
+
+        function initPage() {
+            loadToolData();
+            autoLoadInitialData();
+
+            // Load API Key từ localStorage
+            const savedKey = localStorage.getItem('bk_gemini_api_key');
+            if (savedKey) {
+                document.getElementById('sidebarApiKeyInput').value = savedKey;
+                document.getElementById('apiKeyStatusDot').innerText = '✔';
+                document.getElementById('apiKeyStatusText').innerText = 'Trạng thái: Đã cấu hình';
+            }
+        }
+
+        document.getElementById('sidebarSaveKeyBtn').onclick = () => {
+            const key = document.getElementById('sidebarApiKeyInput').value.trim();
+            if (key) {
+                localStorage.setItem('bk_gemini_api_key', key);
+                document.getElementById('apiKeyStatusDot').innerText = '✔';
+                document.getElementById('apiKeyStatusText').innerText = 'Trạng thái: Đã cấu hình';
+            }
+        };
+
+        function autoLoadInitialData() {
+            try {
+                latestTool2Data = JSON.parse(localStorage.getItem('bk_tools_scene_assets'));
+            } catch (e) {
+                console.log("Không tìm thấy dữ liệu từ Tool 2.");
+            }
+            if (latestTool2Data) {
+                loadCharactersOnly();
+                loadBackgroundsOnly();
+                saveToolData();
+            }
+        }
+
+        function parseAssetLines(text, prefix) {
+            const regex = new RegExp(`^${prefix}\\s*(\\d+)\\s*:\\s*(.+)$`, 'i');
+            const lines = (text || '').split('\n').map(l => l.trim()).filter(Boolean);
+            const entries = [];
+            const customLines = [];
+            for (const line of lines) {
+                const m = line.match(regex);
+                if (m) {
+                    entries.push({ id: m[1].padStart(3, '0'), content: m[2].trim() });
+                } else {
+                    customLines.push(line);
+                }
+            }
+            return { entries, customLines };
+        }
+
+        function mergeAssetText(currentText, newItems, prefix) {
+            const { entries, customLines } = parseAssetLines(currentText, prefix);
+            const map = new Map(entries.map(e => [e.id, e.content]));
+
+            (newItems || []).forEach((item, idx) => {
+                const id = String(idx + 1).padStart(3, '0');
+                if (!map.has(id)) {
+                    map.set(id, item);
+                }
+            });
+
+            const sortedIds = Array.from(map.keys()).sort((a, b) => a.localeCompare(b));
+            const lines = sortedIds.map(id => `${prefix} ${id}: ${map.get(id)}`);
+            return [...lines, ...customLines].join('\n');
+        }
+
+        function loadCharactersOnly() {
+            try {
+                latestTool2Data = JSON.parse(localStorage.getItem('bk_tools_scene_assets'));
+            } catch (e) {}
+
+            const textarea = document.getElementById('characterListContainer');
+            if (!latestTool2Data || !latestTool2Data.characters || latestTool2Data.characters.length === 0) {
+                return;
+            }
+            textarea.value = mergeAssetText(textarea.value, latestTool2Data.characters, 'CHARACTERS');
+        }
+
+        function loadBackgroundsOnly() {
+            try {
+                latestTool2Data = JSON.parse(localStorage.getItem('bk_tools_scene_assets'));
+            } catch (e) {}
+
+            const textarea = document.getElementById('backgroundListContainer');
+            if (!latestTool2Data || !latestTool2Data.backgrounds || latestTool2Data.backgrounds.length === 0) {
+                return;
+            }
+            textarea.value = mergeAssetText(textarea.value, latestTool2Data.backgrounds, 'BACKGROUNDS');
+        }
+
+        // Gọi API Backend để gen prompt chi tiết qua AI
+        async function generateAllPrompts() {
+            const apiKey = localStorage.getItem('bk_gemini_api_key');
+            if (!apiKey) {
+                setAutosaveStatus('⚠ Chưa có API Key. Hãy lưu API Key trước khi Generate.', true);
+                return;
+            }
+
+            const charStyle = document.getElementById('charStyle').value.trim();
+            const bgStyle = document.getElementById('bgStyle').value.trim();
+            const sceneStyle = document.getElementById('sceneStyle').value.trim();
+            const charText = document.getElementById('characterListContainer').value.trim();
+            const bgText = document.getElementById('backgroundListContainer').value.trim();
+
+            const { entries: charEntries } = parseAssetLines(charText, 'CHARACTERS');
+            const { entries: bgEntries } = parseAssetLines(bgText, 'BACKGROUNDS');
+
+            if (charEntries.length === 0 && bgEntries.length === 0) {
+                setAutosaveStatus('⚠ Chưa có Characters hoặc Backgrounds để tạo prompt.', true);
+                return;
+            }
+            if (charEntries.length > 0 && !charStyle) {
+                setAutosaveStatus('⚠ Hãy dán Character Style bên ngoài trước khi Generate.', true);
+                return;
+            }
+            if (bgEntries.length > 0 && !bgStyle) {
+                setAutosaveStatus('⚠ Hãy dán Background Style bên ngoài trước khi Generate.', true);
+                return;
+            }
+
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.classList.remove('hidden');
+            document.getElementById('charOutputText').value = charEntries.length ? "Đang kết nối API để tạo Character Prompts..." : "";
+            document.getElementById('bgOutputText').value = bgEntries.length ? "Đang kết nối API để tạo Background Prompts..." : "";
+            setAutosaveStatus('⏳ Đang generate prompts...', true);
+
+            try {
+                let response = await fetch('/api/generate-asset-prompts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        api_key: apiKey,
+                        char_style: charStyle,
+                        bg_style: bgStyle,
+                        scene_style: sceneStyle,
+                        characters: charEntries.map(e => `${e.id}: ${e.content}`),
+                        backgrounds: bgEntries.map(e => `${e.id}: ${e.content}`)
+                    })
+                });
+
+                let resJson = await response.json();
+                if (response.ok && resJson.status === 'success') {
+                    let fullText = resJson.full_text || '';
+                    let charPart = '';
+                    let bgPart = '';
+
+                    if (fullText.includes("[BACKGROUND PROMPTS]")) {
+                        let parts = fullText.split("[BACKGROUND PROMPTS]");
+                        charPart = parts[0].replace("[CHARACTER PROMPTS]", "").trim();
+                        bgPart = parts[1].trim();
+                    } else {
+                        charPart = fullText.replace("[CHARACTER PROMPTS]", "").trim();
+                    }
+
+                    document.getElementById('charOutputText').value = charPart;
+                    document.getElementById('bgOutputText').value = bgPart;
+                    setAutosaveStatus('✔ Generate All Prompts hoàn tất.', true);
+                } else {
+                    const message = resJson.message || 'Không thể tạo prompt.';
+                    document.getElementById('charOutputText').value = message;
+                    document.getElementById('bgOutputText').value = message;
+                    setAutosaveStatus('⚠ ' + message, true);
+                }
+            } catch (err) {
+                console.error(err);
+                const message = 'Lỗi kết nối API Generate All Prompts: ' + err.message;
+                document.getElementById('charOutputText').value = message;
+                document.getElementById('bgOutputText').value = message;
+                setAutosaveStatus('⚠ ' + message, true);
+            }
+
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+            saveToolData();
+        }
+
+        // ====== UPLOAD ẢNH & NÉN ZIP ======
+        let uploadedImages = { characters: [], backgrounds: [] };
+
+        function naturalSortFiles(fileList) {
+            return Array.from(fileList).sort((a, b) =>
+                a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+            );
+        }
+
+        function readFileAsDataURL(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function extFromFile(file) {
+            const parts = file.name.split('.');
+            return parts.length > 1 ? parts.pop().toLowerCase() : 'jpg';
+        }
+
+        function labelFor(type, idx) {
+            const prefix = type === 'characters' ? 'CHARACTERS' : 'BACKGROUNDS';
+            return `${prefix} ${String(idx + 1).padStart(3, '0')}`;
+        }
+
+        async function addImagesToSection(fileList, type) {
+            const files = naturalSortFiles(fileList).filter(f => f.type.startsWith('image/'));
+            if (files.length === 0) return;
+
+            for (const file of files) {
+                try {
+                    const dataUrl = await readFileAsDataURL(file);
+                    uploadedImages[type].push({ file, dataUrl });
+                } catch (e) {
+                    console.error('Lỗi đọc ảnh:', file.name, e);
+                }
+            }
+            renderImageGrid(type);
+            updateZipButtonState();
+        }
+
+        function handleImageUpload(evt, type) {
+            addImagesToSection(evt.target.files, type);
+            evt.target.value = "";
+        }
+
+        function handleImageDrop(evt, type) {
+            evt.preventDefault();
+            evt.currentTarget.classList.remove('border-orange-500', 'bg-orange-500/5');
+            addImagesToSection(evt.dataTransfer.files, type);
+        }
+
+        function removeImage(type, idx) {
+            uploadedImages[type].splice(idx, 1);
+            renderImageGrid(type);
+            updateZipButtonState();
+        }
+
+        function clearImages(type) {
+            if (uploadedImages[type].length === 0) return;
+            if (!confirm(`Xóa hết ${uploadedImages[type].length} ảnh đã tải trong mục này?`)) return;
+            uploadedImages[type] = [];
+            renderImageGrid(type);
+            updateZipButtonState();
+        }
+
+        function renderImageGrid(type) {
+            const gridId = type === 'characters' ? 'charImgGrid' : 'bgImgGrid';
+            const hintId = type === 'characters' ? 'charImgEmptyHint' : 'bgImgEmptyHint';
+            const countId = type === 'characters' ? 'charImgCount' : 'bgImgCount';
+
+            const grid = document.getElementById(gridId);
+            const hint = document.getElementById(hintId);
+            const count = document.getElementById(countId);
+            const items = uploadedImages[type];
+
+            count.innerText = `${items.length} ảnh`;
+            hint.style.display = items.length === 0 ? 'block' : 'none';
+
+            grid.innerHTML = items.map((img, idx) => `
+                <div class="relative group aspect-square rounded overflow-hidden border border-gray-700 bg-black/40">
+                    <img src="${img.dataUrl}" class="w-full h-full object-cover" alt="${labelFor(type, idx)}">
+                    <span class="absolute bottom-0 left-0 right-0 bg-black/75 text-[9px] text-orange-300 text-center py-0.5 font-mono truncate px-0.5">${labelFor(type, idx)}</span>
+                    <button type="button" onclick="event.stopPropagation(); removeImage('${type}', ${idx})"
+                        class="absolute top-0.5 right-0.5 bg-black/70 hover:bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] leading-none opacity-0 group-hover:opacity-100 transition">×</button>
+                </div>
+            `).join('');
+        }
+
+        function updateZipButtonState() {
+            const total = uploadedImages.characters.length + uploadedImages.backgrounds.length;
+            document.getElementById('zipCountBadge').innerText = total;
+            document.getElementById('downloadZipBtn').disabled = total === 0;
+        }
+
+        async function downloadImagesZip() {
+            const total = uploadedImages.characters.length + uploadedImages.backgrounds.length;
+            if (total === 0) return;
+
+            const btn = document.getElementById('downloadZipBtn');
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span> Đang nén ZIP...';
+
+            try {
+                const zip = new JSZip();
+
+                uploadedImages.characters.forEach((img, idx) => {
+                    zip.file(`CHARACTERS_${String(idx + 1).padStart(3, '0')}.${extFromFile(img.file)}`, img.file);
+                });
+                uploadedImages.backgrounds.forEach((img, idx) => {
+                    zip.file(`BACKGROUNDS_${String(idx + 1).padStart(3, '0')}.${extFromFile(img.file)}`, img.file);
+                });
+
+                const blob = await zip.generateAsync({ type: 'blob' });
+                const url = URL.createObjectURL(blob);
+                const dateStr = new Date().toISOString().slice(0, 10);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `assets_images_${dateStr}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error(e);
+            } finally {
+                btn.innerHTML = originalHTML;
+                updateZipButtonState();
+            }
+        }
+
+        function switchTab(type) {
+            const tabCharBtn = document.getElementById('tabCharBtn');
+            const tabBgBtn = document.getElementById('tabBgBtn');
+            const tabStyleBtn = document.getElementById('tabStyleBtn');
+
+            const tabCharContent = document.getElementById('tabCharContent');
+            const tabBgContent = document.getElementById('tabBgContent');
+            const tabStyleContent = document.getElementById('tabStyleContent');
+
+            // Reset classes
+            tabCharBtn.className = "px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white transition flex items-center gap-2";
+            tabBgBtn.className = "px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white transition flex items-center gap-2";
+            tabStyleBtn.className = "px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white transition flex items-center gap-2";
+
+            tabCharContent.classList.add('hidden');
+            tabBgContent.classList.add('hidden');
+            tabStyleContent.classList.add('hidden');
+
+            if (type === 'characters') {
+                tabCharBtn.className = "px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-orange-400 border-b-2 border-orange-500 bg-[#141721]/60 transition flex items-center gap-2";
+                tabCharContent.classList.remove('hidden');
+            } else if (type === 'backgrounds') {
+                tabBgBtn.className = "px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-orange-400 border-b-2 border-orange-500 bg-[#141721]/60 transition flex items-center gap-2";
+                tabBgContent.classList.remove('hidden');
+            } else if (type === 'styleRef') {
+                tabStyleBtn.className = "px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-orange-400 border-b-2 border-orange-500 bg-[#141721]/60 transition flex items-center gap-2";
+                tabStyleContent.classList.remove('hidden');
+            }
+        }
+
+        function copyContent(elementId) {
+            const textToCopy = document.getElementById(elementId);
+            textToCopy.select();
+            document.execCommand('copy');
+        }
+
+        function downloadTxt(elementId, filename) {
+            const content = document.getElementById(elementId).value;
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+    <script src="/static/global-sync.js"></script>
+</body>
+</html>

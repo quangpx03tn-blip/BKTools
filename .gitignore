@@ -1,0 +1,30 @@
+# Secrets — KHÔNG bao giờ đẩy lên GitHub
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Local archives / backups
+*.rar
+*.zip
+file lưu/
+
+# Runtime data (giữ trên máy local; trên Railway dùng Volume riêng)
+# Nếu muốn đồng bộ sẵn profile mẫu lên GitHub, bỏ comment dòng dưới
+# profiles/
+# projects/

@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BK Tools - Scene Breakdown & Renamer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        darkBg: '#0f1015',
+                        sidebarBg: '#14161f',
+                        cardBg: '#1b1e29',
+                        inputBg: '#14161f',
+                        accentOrange: '#ff7700',
+                        accentOrangeHover: '#e56b00',
+                        borderDark: '#2a2e3d'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f1015; }
+        ::-webkit-scrollbar-thumb { background: #2a2e3d; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #ff7700; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        .toast-show { animation: slideIn 0.3s ease forwards; }
+        .toast-hide { animation: fadeOut 0.3s ease forwards; }
+    </style>
+</head>
+<body class="bg-darkBg text-gray-200 font-sans antialiased h-screen overflow-hidden flex m-0 p-0">
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- SIDEBAR TRÁI -->
+    <aside class="w-64 bg-sidebarBg border-r border-borderDark flex flex-col justify-between shrink-0 select-none h-full">
+        <div>
+            <!-- Header Logo -->
+            <div class="p-4 border-b border-borderDark">
+                <div class="text-accentOrange font-extrabold tracking-wider text-lg">BK TOOLS</div>
+                <div class="text-[10px] text-gray-400 tracking-widest uppercase">PRODUCTION SUITE</div>
+            </div>
+
+            <!-- Project Selector & Nút Quản lý Dự án -->
+            <div class="p-4 border-b border-borderDark space-y-3">
+                <div class="flex justify-between items-center">
+                    <label class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Project</label>
+                    <button id="syncGlobalToolsBtn" class="border border-borderDark bg-cardBg hover:border-accentOrange text-[11px] px-2 py-1 rounded text-gray-300 transition flex items-center gap-1.5 cursor-pointer" title="Đồng bộ toàn hệ thống">
+                        <i class="fa-solid fa-bars-progress text-accentOrange text-[10px]"></i> HH-Media tools
+                    </button>
+                </div>
+
+                <div class="relative">
+                    <select id="projectSelectDropdown" onchange="handleProjectSelect(this)" class="w-full bg-inputBg border border-borderDark text-sm rounded px-3 py-2 appearance-none focus:outline-none focus:border-accentOrange text-gray-300 cursor-pointer">
+                        <option value="">+ New Project...</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-3 top-3 text-xs text-gray-400 pointer-events-none"></i>
+                </div>
+
+                <div class="flex gap-2 relative">
+                    <button id="openNewProjectBtn" onclick="createNewProject()" class="flex-1 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium transition flex items-center justify-center gap-1 cursor-pointer">
+                        <i class="fa-solid fa-plus text-[10px]"></i> New
+                    </button>
+                    <button id="saveProjectBtn" onclick="manualSaveProject()" class="flex-1 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium transition flex items-center justify-center gap-1 cursor-pointer">
+                        <i class="fa-solid fa-floppy-disk text-[10px]"></i> Save
+                    </button>
+
+                    <div class="relative">
+                        <button id="moreMenuBtn" class="px-3 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium transition cursor-pointer">
+                            ... More
+                        </button>
+                        <div id="moreDropdownMenu" class="hidden absolute right-0 top-8 w-40 bg-cardBg border border-borderDark rounded-lg shadow-xl z-50 py-1 text-xs">
+                            <button onclick="exportActiveProject()" class="w-full text-left px-3 py-2 hover:bg-borderDark text-gray-300 flex items-center gap-2 cursor-pointer">
+                                <i class="fa-solid fa-file-arrow-down text-[10px] text-cyan-400"></i> Export JSON
+                            </button>
+                            <div class="border-t border-borderDark my-1"></div>
+                            <button onclick="deleteActiveProject()" class="w-full text-left px-3 py-2 hover:bg-red-950/30 text-red-400 flex items-center gap-2 cursor-pointer">
+                                <i class="fa-solid fa-trash-can text-[10px]"></i> Xóa Project
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Profile Clickable -->
+            <div id="openProfileModalBtn" class="px-4 py-3 border-b border-borderDark cursor-pointer hover:bg-cardBg/50 transition">
+                <div class="flex justify-between items-center text-xs mb-1">
+                    <span class="text-gray-400 uppercase tracking-wider">Active Profile</span>
+                    <span id="activeProfileId" class="text-gray-500 font-mono">061</span>
+                </div>
+                <div id="activeProfileName" class="text-sm text-gray-400 italic">Chưa chọn profile</div>
+            </div>
+
+            <!-- Menu Navigation chuẩn hệ thống -->
+            <nav class="py-2 space-y-1" id="sidebarNav">
+                <a href="/" class="nav-tab flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 hover:text-gray-200 text-sm transition">Topic Ideator</a>
+                <a href="/script_writer.html" class="nav-tab flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 hover:text-gray-200 text-sm transition"><span class="w-6 text-xs text-gray-500">1</span> Script Writer</a>
+                <a href="/scene_breakdown.html" class="nav-tab flex items-center px-4 py-2.5 bg-cardBg text-accentOrange border-r-4 border-accentOrange text-sm font-medium transition"><span class="w-6 text-xs text-gray-500">2</span> Scene Breakdown</a>
+                <a href="/asset_prompts.html" class="nav-tab flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 hover:text-gray-200 text-sm transition"><span class="w-6 text-xs text-gray-500">3</span> Asset Prompts</a>
+                <a href="/camera_movement.html" class="nav-tab flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 hover:text-gray-200 text-sm transition"><span class="w-6 text-xs text-gray-500">4</span> Camera Movement</a>
+                <a href="/thumbnail.html" class="nav-tab flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 hover:text-gray-200 text-sm transition"><span class="w-6 text-xs text-gray-500">5</span> Thumbnail</a>
+                <a href="/video_metadata.html" class="nav-tab flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 hover:text-gray-200 text-sm transition"><span class="w-6 text-xs text-gray-500">6</span> Video Metadata</a>
+                <a href="/upload_qc.html" class="nav-tab flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 hover:text-gray-200 text-sm transition"><span class="w-6 text-xs text-gray-500">7</span> Upload QC</a>
+            </nav>
+        </div>
+
+        <!-- Footer Sidebar -->
+        <div class="p-4 border-t border-borderDark space-y-3">
+            <div>
+                <label class="text-[10px] text-gray-400 uppercase tracking-wider block mb-1">GEMINI API KEY</label>
+                <div class="flex gap-1">
+                    <input type="password" id="sidebarApiKeyInput" placeholder="Nhập API Key..." 
+                        class="w-full bg-inputBg border border-borderDark rounded px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-accentOrange font-mono">
+                    <button id="sidebarSaveKeyBtn" class="bg-accentOrange hover:bg-accentOrangeHover text-white text-xs px-3 py-1.5 rounded transition cursor-pointer font-bold flex items-center justify-center min-w-[50px]">
+                        Lưu
+                    </button>
+                </div>
+            </div>
+            <div class="flex items-center justify-between text-[11px] pt-1">
+                <span class="text-gray-500">Trạng thái:</span>
+                <span id="apiKeyStatus" class="text-gray-400 font-medium">✔ Chưa cấu hình</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- NỘI DUNG CHÍNH (MAIN CONTENT) -->
+    <main class="flex-1 flex flex-col h-screen overflow-y-auto w-full p-6 space-y-6">
+        
+        <!-- HEADER TRANG -->
+        <div class="flex justify-between items-start border-b border-borderDark pb-4 shrink-0">
+            <div>
+                <h1 class="text-lg font-bold text-gray-100">Scene Breakdown</h1>
+                <p class="text-xs text-gray-400 mt-0.5">Split script theo dấu câu → Assign character + background bằng Gemini API</p>
+            </div>
+            <span class="bg-cardBg border border-borderDark text-xs px-3 py-1 rounded text-orange-400 font-semibold font-mono">Tool 2</span>
+        </div>
+
+        <!-- WORKFLOW NOTIFICATION BANNER -->
+        <div class="bg-cardBg border border-borderDark rounded-xl p-3 text-xs text-slate-300 flex items-center justify-between shrink-0">
+            <div>
+                <span class="text-orange-400 font-semibold">💡 Workflow:</span> Tool 2 = dùng mồi video. Split scenes + tạo G-Labs prompts cho từng scene. Tab "G-Labs Prompts" chứa prompts sẵn sàng paste vào G-Labs. Tool 3 = dùng 1 lần khi setup kênh. Tạo reference sheets cho character/background.
+            </div>
+        </div>
+
+        <!-- CONFIGURATION & PARAMETERS PANEL -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
+            <div class="bg-cardBg border border-borderDark p-3 rounded-xl">
+                <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Visual Style</label>
+                <div class="text-sm font-medium text-slate-200">Custom (từ Profile)</div>
+            </div>
+            <div class="bg-cardBg border border-borderDark p-3 rounded-xl relative">
+                <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Ngôn ngữ VO</label>
+                <div class="relative">
+                    <select id="voLanguageSelect" class="w-full bg-darkBg border border-borderDark text-sm rounded px-2.5 py-1 appearance-none focus:outline-none focus:border-accentOrange text-slate-200 cursor-pointer font-medium">
+                        <option value="Tiếng Việt">Tiếng Việt</option>
+                        <option value="English">English</option>
+                        <option value="Tiếng Đức">Tiếng Đức</option>
+                        <option value="Tiếng Bồ Đào Nha">Tiếng Bồ Đào Nha</option>
+                        <option value="Tiếng Tây Ban Nha">Tiếng Tây Ban Nha</option>
+                        <option value="Tiếng Hàn">Tiếng Hàn</option>
+                        <option value="Tiếng Nhật">Tiếng Nhật</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-2.5 top-2.5 text-xs text-gray-400 pointer-events-none"></i>
+                </div>
+            </div>
+            <div class="bg-cardBg border border-borderDark p-3 rounded-xl">
+                <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Min Ký tự / Scene</label>
+                <input type="number" id="minChar" value="30" class="w-full bg-darkBg border border-borderDark rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-orange-500">
+            </div>
+            <div class="bg-cardBg border border-borderDark p-3 rounded-xl">
+                <label class="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Max Ký tự / Scene</label>
+                <input type="number" id="maxChar" value="100" class="w-full bg-darkBg border border-borderDark rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-orange-500">
+            </div>
+        </div>
+
+        <!-- 2 KHUNG TEXTAREA (KỊCH BẢN & PREVIEW SCENES) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
+            <div class="bg-cardBg border border-borderDark rounded-xl p-4 flex flex-col h-[280px]">
+                <div class="flex justify-between items-center mb-2 text-xs">
+                    <span class="text-orange-400 font-bold uppercase tracking-wider">| Kịch bản</span>
+                    <span id="scriptWordCount" class="text-gray-400 font-mono">0 ký tự</span>
+                </div>
+                <textarea id="sourceScriptInput" class="w-full flex-1 bg-darkBg border border-borderDark rounded-lg p-3 text-xs text-gray-300 font-mono resize-none focus:outline-none focus:border-orange-500 leading-relaxed" placeholder="Dán kịch bản vào đây hoặc bấm tải từ Tool 1..."></textarea>
+            </div>
+
+            <div class="bg-cardBg border border-borderDark rounded-xl p-4 flex flex-col h-[280px]">
+                <div class="flex justify-between items-center mb-2 text-xs">
+                    <span class="text-orange-400 font-bold uppercase tracking-wider">| PREVIEW SCENES (Định dạng .srt)</span>
+                    <span id="previewScenesCount" class="text-gray-400 font-mono">0 scenes</span>
+                </div>
+                <div id="previewScenesBox" class="w-full flex-1 bg-darkBg border border-borderDark rounded-lg p-3 text-xs text-cyan-300 font-mono overflow-y-auto leading-relaxed select-all">
+                    Scenes sẽ hiện ở đây sau khi split...
+                </div>
+            </div>
+        </div>
+
+        <!-- THANH CÔNG CỤ (ACTION BUTTONS & BATCH) -->
+        <div class="bg-cardBg border border-borderDark p-3 rounded-xl flex flex-wrap items-center justify-between gap-3 shrink-0">
+            <div class="flex items-center gap-2 overflow-x-auto flex-wrap">
+                <button id="filterScriptBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs px-3.5 py-2 rounded-lg border border-borderDark transition cursor-pointer flex items-center gap-1.5 font-medium">
+                    <i class="fa-solid fa-paintbrush text-cyan-400 text-[11px]"></i> Lọc Script
+                </button>
+                <button id="splitScenesBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs px-3.5 py-2 rounded-lg border border-borderDark transition cursor-pointer flex items-center gap-1.5 font-medium">
+                    <i class="fa-solid fa-scissors text-accentOrange text-[11px]"></i> Split Scenes
+                </button>
+                <button id="prescanBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs px-3.5 py-2 rounded-lg border border-borderDark transition cursor-pointer flex items-center gap-1.5 font-medium">
+                    <i class="fa-solid fa-magnifying-glass text-purple-400 text-[11px]"></i> Pre-scan
+                </button>
+                <button id="assignAssetsBtn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs px-3.5 py-2 rounded-lg border border-borderDark transition cursor-pointer flex items-center gap-1.5 font-medium">
+                    <i class="fa-solid fa-bolt text-amber-400 text-[11px]"></i> Assign Assets
+                </button>
+                <!-- Nút hành động mới theo yêu cầu -->
+                <button id="getPromptImgBtn" class="bg-slate-800/80 hover:bg-slate-700 text-cyan-300 text-xs px-3.5 py-2 rounded-lg border border-cyan-900/50 transition cursor-pointer flex items-center gap-1.5 font-medium">
+                    <i class="fa-solid fa-image text-cyan-400 text-[11px]"></i> Get-Prompt - image
+                </button>
+                <button id="getPromptVideoBtn" class="bg-slate-800/80 hover:bg-slate-700 text-purple-300 text-xs px-3.5 py-2 rounded-lg border border-purple-900/50 transition cursor-pointer flex items-center gap-1.5 font-medium" title="Đọc từng prompt ảnh + VO để viết prompt image-to-video tương ứng">
+                    <i class="fa-solid fa-film text-purple-400 text-[11px]"></i> Get-Prom-Video
+                </button>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="text-xs text-slate-300 flex items-center gap-1.5 font-mono">
+                    <span class="text-emerald-400">✓</span> <strong id="statusScenesCount" class="text-white">0</strong> scenes – bấm Pre-scan hoặc Assign
+                </div>
+                <div class="flex items-center gap-2 text-xs text-slate-400">
+                    <span>Batch:</span>
+                    <input type="text" id="batchInput" value="20" class="w-12 bg-darkBg border border-borderDark rounded text-center px-2 py-1 text-white text-xs focus:outline-none focus:border-accentOrange font-mono">
+                </div>
+            </div>
+        </div>
+
+        <!-- Ô THÔNG BÁO TRẠNG THÁI LỌC SCRIPT -->
+        <div id="filterStatusBox" class="bg-cardBg border border-borderDark rounded-xl px-4 py-3 text-xs text-slate-400 font-mono shrink-0">
+            Không có gì để lọc – script đã sạch.
+        </div>
+
+        <!-- DASHBOARD THỐNG KÊ (METRICS BAR) -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 bg-cardBg border border-borderDark p-4 rounded-xl text-center shrink-0">
+            <div class="text-left px-2">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">SCENES</div>
+                <div id="metricScenes" class="text-xl font-bold text-orange-400 font-mono">0</div>
+            </div>
+            <div class="text-left px-2">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">ASSIGNED</div>
+                <div id="metricAssigned" class="text-xl font-bold text-emerald-400 font-mono">0</div>
+            </div>
+            <div class="text-left px-2">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">CHARACTERS</div>
+                <div id="metricChars" class="text-xl font-bold text-slate-500 font-mono">-</div>
+            </div>
+            <div class="text-left px-2">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">BACKGROUNDS</div>
+                <div id="metricBgs" class="text-xl font-bold text-slate-500 font-mono">-</div>
+            </div>
+            <div class="text-left px-2 col-span-2 md:col-span-1">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">DURATION</div>
+                <div id="metricDuration" class="text-xl font-bold text-amber-400 font-mono">0s</div>
+            </div>
+        </div>
+
+        <!-- HỆ THỐNG TAB ĐỘC LẬP (ĐÃ THÊM TAB GET-PROMPT IMAGE) -->
+        <div class="bg-cardBg border border-borderDark rounded-xl overflow-hidden shadow-xl shrink-0">
+            <div class="flex border-b border-borderDark overflow-x-auto text-xs md:text-sm font-medium bg-sidebarBg">
+                <button onclick="switchTab('scene-list')" id="btn-scene-list" class="tab-btn px-4 py-3 border-b-2 border-orange-500 text-orange-400 whitespace-nowrap cursor-pointer transition font-semibold">SCENE LIST</button>
+                <button onclick="switchTab('glabs-prompts')" id="btn-glabs-prompts" class="tab-btn px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap cursor-pointer transition">G-LABS IMAGE PROMPTS</button>
+                <button onclick="switchTab('veos-prompts')" id="btn-veos-prompts" class="tab-btn px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap cursor-pointer transition">VEOS VIDEO PROMPTS</button>
+                <button onclick="switchTab('get-prompt-image')" id="btn-get-prompt-image" class="tab-btn px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap cursor-pointer transition">GET-PROMPT IMAGE</button>
+                <button onclick="switchTab('assets')" id="btn-assets" class="tab-btn px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap cursor-pointer transition">ASSETS</button>
+                <button onclick="switchTab('camera-guide')" id="btn-camera-guide" class="tab-btn px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap cursor-pointer transition">CAMERA GUIDE</button>
+                <button onclick="switchTab('production-notes')" id="btn-production-notes" class="tab-btn px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap cursor-pointer transition">PRODUCTION NOTES</button>
+            </div>
+
+            <div class="p-4">
+                <!-- 1. TAB: SCENE LIST -->
+                <div id="tab-scene-list" class="tab-content block">
+                    <div class="overflow-x-auto">
+                        <table class="w-full table-fixed text-left border-collapse text-xs md:text-sm">
+                            <thead>
+                                <tr class="border-b border-borderDark bg-darkBg/50 text-slate-400 uppercase text-[10px] tracking-wider">
+                                    <th class="p-3 w-16">#</th>
+                                    <th class="p-3 w-36">Timecode (.srt)</th>
+                                    <th class="p-3">VO (Voice Over Text)</th>
+                                    <th class="p-3 w-52">Character</th>
+                                    <th class="p-3 w-48">Background</th>
+                                    <th class="p-3 w-28">Camera</th>
+                                    <th class="p-3 w-20">Dur</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sceneTableBody" class="divide-y divide-borderDark/50">
+                                <tr>
+                                    <td colspan="7" class="p-8 text-center text-gray-500 italic">Chưa có phân cảnh nào. Hãy bấm "Lọc Script" sau đó bấm "Split Scenes" để bắt đầu.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 2. TAB: G-LABS IMAGE PROMPTS -->
+                <div id="tab-glabs-prompts" class="tab-content hidden flex flex-col h-[400px]">
+                    <div class="bg-amber-950/30 border border-amber-600/30 p-3 rounded-lg mb-3 text-xs text-amber-300 shrink-0">
+                        ⚠️ <strong>G-LABS IMAGE PROMPTS:</strong> Danh sách prompt tự động tạo riêng biệt từ các phân cảnh đã tách.
+                    </div>
+                    <textarea id="glabsPromptContent" class="w-full flex-1 bg-darkBg border border-borderDark rounded-lg p-3 font-mono text-xs text-slate-300 resize-none focus:outline-none focus:border-accentOrange leading-relaxed" placeholder="G-Labs Image Prompts sẽ hiển thị ở đây sau khi Split Scenes..."></textarea>
+                    <div class="mt-3 flex gap-3 shrink-0">
+                        <button onclick="showToast('Đã tải xuống file TXT thành công!')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3 py-2 rounded border border-borderDark transition cursor-pointer">↓ TXT (tất cả)</button>
+                        <button onclick="showToast('Đã copy prompts vào bộ nhớ tạm!')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3 py-2 rounded border border-borderDark transition cursor-pointer">Copy batch hiện tại</button>
+                    </div>
+                </div>
+
+                <!-- 3. TAB: VEOS VIDEO PROMPTS -->
+                <div id="tab-veos-prompts" class="tab-content hidden flex flex-col h-[400px]">
+                    <h3 class="text-sm font-semibold text-slate-300 mb-2 shrink-0">Veos Video Prompts cấu hình chuyển động</h3>
+                    <p class="text-xs text-slate-400 mb-3 shrink-0">Trang kết quả độc lập cho cấu hình chuyển động video theo từng phân cảnh.</p>
+                    <textarea id="veosPromptContent" class="w-full flex-1 bg-darkBg border border-borderDark rounded-lg p-3 font-mono text-xs text-slate-300 resize-none focus:outline-none focus:border-accentOrange leading-relaxed" placeholder="Veos Video Prompts sẽ hiển thị ở đây sau khi Split Scenes..."></textarea>
+                </div>
+
+                <!-- 4. TAB MỚI: GET-PROMPT IMAGE (2 CỘT/Ô: Ô 1 CẤU HÌNH SCENE STYLE, Ô 2 HIỂN THỊ KẾT QUẢ + NÚT DOWNLOAD) -->
+                <div id="tab-get-prompt-image" class="tab-content hidden flex flex-col space-y-4">
+                    <!-- Ô số 1 (trên): Nhập hoặc chỉnh sửa cấu hình scene_style -->
+                    <div class="bg-darkBg border border-borderDark rounded-xl p-4 flex flex-col h-[160px]">
+                        <div class="flex justify-between items-center mb-1 text-xs">
+                            <span class="text-cyan-400 font-bold uppercase tracking-wider"> Scene Style</span>
+                            <span class="text-gray-400 text-[10px]">Tùy chỉnh phong cách prompt ảnh</span>
+                        </div>
+                        <textarea id="sceneStyleConfigInput" class="w-full flex-1 bg-cardBg border border-borderDark rounded-lg p-3 text-xs text-cyan-200 font-mono resize-none focus:outline-none focus:border-cyan-500 leading-relaxed" placeholder="Nhập hoặc chỉnh sửa cấu hình scene_style tại đây (VD: cinematic lighting, 8k, detailed background...)"></textarea>
+                    </div>
+
+                    <!-- Ô số 2 (dưới): Hiển thị kết quả xử lý/tạo prompt + Nút Download ở góc dưới cùng -->
+                    <div class="bg-darkBg border border-borderDark rounded-xl p-4 flex flex-col h-[280px] relative">
+                        <div class="flex justify-between items-center mb-1 text-xs">
+                            <span class="text-emerald-400 font-bold uppercase tracking-wider">Kết quả xử lý & Tạo Prompt Image</span>
+                            <span class="text-gray-400 text-[10px]">Được tạo tự động từ Scene List & Style</span>
+                        </div>
+                        <textarea id="getPromptImgResultContent" class="w-full flex-1 bg-cardBg border border-borderDark rounded-lg p-3 pb-12 font-mono text-xs text-slate-300 resize-none focus:outline-none focus:border-emerald-500 leading-relaxed" placeholder="Kết quả xử lý Get-Prompt Image sẽ hiển thị ở đây..."></textarea>
+                        <!-- Nút Download ở góc dưới cùng của khung -->
+                        <div class="absolute bottom-6 right-6">
+                            <button onclick="downloadGetPromptImgTxt()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3.5 py-2 rounded-lg font-semibold transition shadow-lg shadow-emerald-950/40 cursor-pointer flex items-center gap-1.5">
+                                <i class="fa-solid fa-download"></i> ↓ Download All Prompt
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. TAB: ASSETS -->
+                <div id="tab-assets" class="tab-content hidden flex flex-col h-[400px]">
+                    <div class="flex items-center justify-between mb-3 shrink-0">
+                        <h3 class="text-sm font-semibold text-slate-300">Quản lý Tài nguyên (Assets)</h3>
+                        <button id="sendAssetsToTool3Btn" onclick="sendAssetsToTool3Manual()" title="Gửi Characters/Backgrounds hiện tại trong ô bên dưới sang Tool 3 (Asset Prompts)" class="bg-slate-800/80 hover:bg-slate-700 text-emerald-300 text-xs px-3.5 py-2 rounded-lg border border-emerald-900/50 transition cursor-pointer flex items-center gap-1.5 font-medium">
+                            <i class="fa-solid fa-paper-plane text-emerald-400 text-[11px]"></i> Gửi sang Tool 3
+                        </button>
+                    </div>
+                    <textarea id="assetsResultContainer" class="w-full flex-1 bg-darkBg border border-borderDark rounded-lg p-3 font-mono text-xs text-slate-300 resize-none focus:outline-none focus:border-accentOrange leading-relaxed" placeholder="Assets quản lý nhân vật & bối cảnh..."></textarea>
+                </div>
+
+                <!-- 6. TAB: CAMERA GUIDE -->
+                <div id="tab-camera-guide" class="tab-content hidden flex flex-col h-[400px]">
+                    <h3 class="text-sm font-semibold text-slate-300 mb-2 shrink-0">Camera Guide quy chuẩn</h3>
+                    <p class="text-xs text-slate-400 mb-3 shrink-0">Trang kết quả độc lập hướng dẫn góc máy cho từng phân cảnh.</p>
+                    <textarea id="cameraGuideContent" class="w-full flex-1 bg-darkBg border border-borderDark rounded-lg p-3 font-mono text-xs text-slate-300 resize-none focus:outline-none focus:border-accentOrange leading-relaxed" placeholder="Camera Guide sẽ hiển thị ở đây sau khi Split Scenes..."></textarea>
+                </div>
+
+                <!-- 7. TAB: PRODUCTION NOTES -->
+                <div id="tab-production-notes" class="tab-content hidden flex flex-col h-[400px]">
+                    <h3 class="text-sm font-semibold text-slate-300 mb-2 shrink-0">Ghi chú sản xuất (Production Notes)</h3>
+                    <p class="text-xs text-slate-400 mb-3 shrink-0">Trang kết quả độc lập ghi chú sản xuất tổng thể.</p>
+                    <textarea id="prodNotesContent" class="w-full flex-1 bg-darkBg border border-borderDark rounded-lg p-3 font-mono text-xs text-slate-300 resize-none focus:outline-none focus:border-accentOrange leading-relaxed" placeholder="Production Notes sẽ hiển thị ở đây sau khi Split Scenes..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- KHUNG MODULE TÍNH NĂNG NÂNG CAO -->
+        <div class="bg-cardBg border border-borderDark rounded-xl p-4 flex flex-wrap items-center gap-2.5 shadow-lg shrink-0">
+            <button onclick="downloadSceneListXlsx()" class="bg-[#14161f] hover:bg-[#202330] border border-[#2a2e3d] text-slate-300 text-xs px-3.5 py-2 rounded-lg font-mono transition cursor-pointer flex items-center gap-1.5">
+                <i class="fa-solid fa-file-excel text-emerald-400"></i> ↓ XLSX
+            </button>
+          <button onclick="downloadGlabsTxt()" class="bg-[#14161f] hover:bg-[#202330] border border-[#2a2e3d] text-slate-300 text-xs px-3.5 py-2 rounded-lg font-mono transition cursor-pointer flex items-center gap-1.5">
+    <i class="fa-solid fa-file-lines text-orange-400"></i> ↓ G-Labs TXT
+</button>
+            <button onclick="showToast('Đã trích xuất VO Only thành công!')" class="bg-[#14161f] hover:bg-[#202330] border border-blue-900/50 text-blue-300 text-xs px-3.5 py-2 rounded-lg font-mono transition cursor-pointer flex items-center gap-1.5">
+                <i class="fa-solid fa-microphone text-blue-400"></i> 🎙️ VO Only
+            </button>
+            <button onclick="showToast('Suggest Footage All thành công!')" class="bg-[#14161f] hover:bg-[#202330] border border-purple-900/50 text-purple-300 text-xs px-3.5 py-2 rounded-lg font-mono transition cursor-pointer flex items-center gap-1.5">
+                <i class="fa-solid fa-clapperboard text-purple-400"></i> 🎬 Suggest Footage All
+            </button>
+            <button onclick="showToast('Suggest Sec Char All thành công!')" class="bg-[#14161f] hover:bg-[#202330] border border-emerald-900/50 text-emerald-300 text-xs px-3.5 py-2 rounded-lg font-mono transition cursor-pointer flex items-center gap-1.5">
+                <i class="fa-solid fa-users text-emerald-400"></i> 👥 Suggest Sec Char All
+            </button>
+            <button onclick="showToast('Suggest GFX All thành công!')" class="bg-[#14161f] hover:bg-[#202330] border border-rose-900/50 text-rose-300 text-xs px-3.5 py-2 rounded-lg font-mono transition cursor-pointer flex items-center gap-1.5">
+                <i class="fa-solid fa-wand-magic-sparkles text-rose-400"></i> 🎨 Suggest GFX All
+            </button>
+            <button onclick="showToast('Suggest Title All thành công!')" class="bg-[#14161f] hover:bg-[#202330] border border-amber-900/50 text-amber-300 text-xs px-3.5 py-2 rounded-lg font-mono transition cursor-pointer flex items-center gap-1.5">
+                <i class="fa-solid fa-heading text-amber-400"></i> 📄 Suggest Title All
+            </button>
+            <button onclick="showToast('Gen Motion Prompts All thành công!')" class="bg-[#14161f] hover:bg-[#202330] border border-fuchsia-900/50 text-fuchsia-300 text-xs px-3.5 py-2 rounded-lg font-mono transition cursor-pointer flex items-center gap-1.5">
+                <i class="fa-solid fa-video text-fuchsia-400"></i> 🎥 Gen Motion Prompts All
+            </button>
+            <button onclick="showToast('Motion Package TXT thành công!')" class="bg-[#14161f] hover:bg-[#202330] border border-orange-900/50 text-orange-300 text-xs px-3.5 py-2 rounded-lg font-mono transition cursor-pointer flex items-center gap-1.5">
+                <i class="fa-solid fa-cube text-orange-400"></i> 📦 Motion Package TXT
+            </button>
+            <div class="w-full flex flex-wrap gap-2 pt-2 border-t border-borderDark/60 mt-1">
+                <button onclick="showToast('Export Production Package JSON thành công!')" class="bg-[#14161f] hover:bg-[#202330] border border-cyan-900/50 text-cyan-300 text-xs px-3.5 py-2 rounded-lg font-mono transition cursor-pointer flex items-center gap-1.5">
+                    <i class="fa-solid fa-file-code text-cyan-400"></i> ↓ Production Package JSON
+                </button>
+                <button onclick="sendAssetsToTool3Manual()" class="bg-[#14161f] hover:bg-[#202330] border border-emerald-900/50 text-emerald-400 text-xs px-3.5 py-2 rounded-lg font-mono transition cursor-pointer flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrow-right text-emerald-400"></i> → Assets sang Tool 3
+                </button>
+            </div>
+        </div>
+
+        <!-- MODULE: SCENE RENAMER -->
+        <div class="bg-cardBg border border-borderDark rounded-xl p-5 shadow-xl shrink-0 space-y-4 mb-16">
+            <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleSceneRenamer()">
+                <div class="flex items-center gap-2">
+                    <i id="renamerChevron" class="fa-solid fa-chevron-down text-accentOrange text-xs transition-transform duration-200"></i>
+                    <h3 class="text-sm font-bold text-gray-100 flex items-center gap-2">
+                        <i class="fa-solid fa-folder-open text-amber-400"></i> Scene Renamer
+                        <span class="text-[11px] font-normal text-gray-400">— Đổi tên ảnh thành 001, 002... cho video build</span>
+                    </h3>
+                </div>
+            </div>
+
+            <div id="sceneRenamerBody" class="space-y-4 pt-1">
+                <div class="bg-[#14161f] border border-amber-600/30 p-3 rounded-lg text-xs text-amber-300/90 font-mono leading-relaxed">
+                    <strong>Flow:</strong> Download ảnh từ G-Labs → Kéo vào đây → Tự đổi tên thành 001.jpg, 002.jpg... (natural sort) → Download ZIP → Bỏ vào folder <code class="text-cyan-300">images/</code> để chạy <code class="text-emerald-300">build_video_srt.py</code>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="md:col-span-2 bg-darkBg border border-borderDark rounded-xl p-4 flex flex-col justify-between min-h-[160px]">
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">📁 Ảnh Scenes từ G-Labs</div>
+                        <div id="dropZone" class="border-2 border-dashed border-borderDark hover:border-accentOrange rounded-lg p-6 text-center flex flex-col items-center justify-center cursor-pointer transition bg-cardBg/30">
+                            <i class="fa-solid fa-cloud-arrow-up text-2xl text-accentOrange mb-2"></i>
+                            <span class="text-xs text-gray-300 font-medium">Kéo thả ảnh vào đây hoặc bấm để chọn file</span>
+                            <span class="text-[10px] text-gray-500 mt-1">Hỗ trợ định dạng .jpg, .png, .webp</span>
+                            <input type="file" id="imageFilesInput" multiple accept="image/*" class="hidden">
+                        </div>
+                        <div id="fileUploadStatus" class="text-xs text-emerald-400 mt-2 font-mono hidden">Đã chọn 0 files.</div>
+                    </div>
+
+                    <div class="bg-darkBg border border-borderDark rounded-xl p-4 flex flex-col justify-between">
+                        <div>
+                            <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">⚙️ Tùy chọn</div>
+                            <label class="block text-xs text-gray-300 mb-1 font-medium">Bắt đầu từ số</label>
+                            <input type="number" id="startNumberInput" value="1" class="w-full bg-inputBg border border-borderDark rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-accentOrange font-mono">
+                        </div>
+                        <button onclick="processRenameScenes()" class="w-full mt-4 bg-accentOrange hover:bg-accentOrangeHover text-white text-xs py-2.5 rounded-lg font-semibold transition cursor-pointer shadow-lg shadow-orange-900/30 flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Tiến hành Đổi Tên & Tải ZIP
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- POPUP PROFILE KÊNH -->
+    <div id="profileModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="bg-sidebarBg border border-borderDark w-[600px] rounded-xl p-6 shadow-2xl relative">
+            <div class="flex justify-between items-center pb-4 border-b border-borderDark">
+                <div>
+                    <h3 class="text-base font-bold text-gray-100 flex items-center gap-2">
+                        <i class="fa-solid fa-folder-open text-accentOrange"></i> Profiles Kênh
+                    </h3>
+                    <p class="text-xs text-gray-400 mt-0.5">Lưu trữ cấu hình</p>
+                </div>
+                <button id="closeProfileModal" class="text-gray-400 hover:text-white text-xs cursor-pointer">✕ Đóng</button>
+            </div>
+            <div id="profileListContainer" class="py-6 max-h-[300px] overflow-y-auto space-y-3">
+                <div class="text-center text-gray-500 text-sm py-8">Chưa có profile nào.</div>
+            </div>
+            <div class="flex justify-end pt-4 border-t border-borderDark">
+                <button id="closeProfileModalBottom" class="bg-cardBg border border-borderDark hover:bg-borderDark text-xs px-4 py-2 rounded text-gray-300 cursor-pointer">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT XỬ LÝ TOÀN DIỆN & TÍCH HỢP SCENE RENAMER GỌI API ZIP -->
+    <script>
+        let currentActiveProject = "Default_Project";
+        let uploadedFiles = [];
+
+        window.onload = function() {
+            initProjectsList();
+            loadProjectData(currentActiveProject);
+
+            const savedApiKey = localStorage.getItem('bk_gemini_api_key');
+            if (savedApiKey) {
+                document.getElementById('sidebarApiKeyInput').value = savedApiKey;
+                document.getElementById('apiKeyStatus').className = "text-emerald-400 font-semibold";
+                document.getElementById('apiKeyStatus').innerText = "✔ Đã cấu hình";
+            }
+        };
+
+        function initProjectsList() {
+            let projects = JSON.parse(localStorage.getItem('bk_projects_list') || '["Default_Project", "Future_Industry_Report"]');
+            let savedActive = localStorage.getItem('bk_last_active_project');
+            if (savedActive && projects.includes(savedActive)) {
+                currentActiveProject = savedActive;
+            } else {
+                currentActiveProject = projects[0];
+            }
+
+            const selectDropdown = document.getElementById('projectSelectDropdown');
+            selectDropdown.innerHTML = '<option value="">+ New Project...</option>';
+            projects.forEach(p => {
+                let opt = document.createElement('option');
+                opt.value = p;
+                opt.innerText = p;
+                selectDropdown.appendChild(opt);
+            });
+            selectDropdown.value = currentActiveProject;
+        }
+
+        function handleProjectSelect(selectElement) {
+            const val = selectElement.value;
+            if (val === "") {
+                createNewProject();
+            } else if (val) {
+                saveCurrentProjectData();
+                currentActiveProject = val;
+                localStorage.setItem('bk_last_active_project', val);
+                loadProjectData(val);
+                showToast(`Đã chuyển sang dự án: ${val}`);
+            }
+        }
+
+        function createNewProject() {
+            let projName = prompt("Nhập tên dự án mới:", "Project_" + Date.now().toString().slice(-4));
+            if (!projName) {
+                document.getElementById('projectSelectDropdown').value = currentActiveProject;
+                return;
+            }
+            projName = projName.trim().replace(/\s+/g, '_');
+
+            let projects = JSON.parse(localStorage.getItem('bk_projects_list') || '["Default_Project"]');
+            if (!projects.includes(projName)) {
+                projects.push(projName);
+                localStorage.setItem('bk_projects_list', JSON.stringify(projects));
+            }
+            currentActiveProject = projName;
+            localStorage.setItem('bk_last_active_project', projName);
+            
+            initProjectsList();
+            clearWorkspace();
+            showToast(`Đã tạo và mở dự án mới: ${projName}`);
+        }
+
+        function manualSaveProject() {
+            saveCurrentProjectData();
+            showToast(`Đã lưu thủ công dự án [${currentActiveProject}] thành công!`);
+        }
+
+        function saveCurrentProjectData() {
+            const data = {
+                scriptText: document.getElementById('sourceScriptInput').value,
+                previewHtml: document.getElementById('previewScenesBox').innerText,
+                tableHtml: document.getElementById('sceneTableBody').innerHTML,
+                glabsText: document.getElementById('glabsPromptContent').value,
+                veosText: document.getElementById('veosPromptContent').value,
+                sceneStyleConfig: document.getElementById('sceneStyleConfigInput').value,
+                getPromptImgResult: document.getElementById('getPromptImgResultContent').value,
+                assetsText: document.getElementById('assetsResultContainer').value,
+                cameraText: document.getElementById('cameraGuideContent').value,
+                notesText: document.getElementById('prodNotesContent').value,
+                voLang: document.getElementById('voLanguageSelect').value,
+                minChar: document.getElementById('minChar').value,
+                maxChar: document.getElementById('maxChar').value,
+                metrics: {
+                    scenes: document.getElementById('metricScenes').innerText,
+                    assigned: document.getElementById('metricAssigned').innerText,
+                    chars: document.getElementById('metricChars').innerText,
+                    bgs: document.getElementById('metricBgs').innerText,
+                    duration: document.getElementById('metricDuration').innerText,
+                    statusCount: document.getElementById('statusScenesCount').innerText
+                }
+            };
+            localStorage.setItem(`bk_scene_breakdown_data_${currentActiveProject}`, JSON.stringify(data));
+        }
+
+        function loadProjectData(projName) {
+            let raw = localStorage.getItem(`bk_scene_breakdown_data_${projName}`);
+            if (raw) {
+                try {
+                    let data = JSON.parse(raw);
+                    document.getElementById('sourceScriptInput').value = data.scriptText || "";
+                    document.getElementById('previewScenesBox').innerText = data.previewHtml || "Scenes sẽ hiện ở đây sau khi split...";
+                    document.getElementById('sceneTableBody').innerHTML = data.tableHtml || '<tr><td colspan="7" class="p-8 text-center text-gray-500 italic">Chưa có phân cảnh nào.</td></tr>';
+                    document.getElementById('glabsPromptContent').value = data.glabsText || "";
+                    document.getElementById('veosPromptContent').value = data.veosText || "";
+                    if (document.getElementById('sceneStyleConfigInput')) {
+                        document.getElementById('sceneStyleConfigInput').value = data.sceneStyleConfig || "";
+                    }
+                    if (document.getElementById('getPromptImgResultContent')) {
+                        document.getElementById('getPromptImgResultContent').value = data.getPromptImgResult || "";
+                    }
+                    document.getElementById('assetsResultContainer').value = data.assetsText || "";
+                    document.getElementById('cameraGuideContent').value = data.cameraText || "";
+                    document.getElementById('prodNotesContent').value = data.notesText || "";
+                    if (data.voLang) document.getElementById('voLanguageSelect').value = data.voLang;
+                    if (data.minChar) document.getElementById('minChar').value = data.minChar;
+                    if (data.maxChar) document.getElementById('maxChar').value = data.maxChar;
+
+                    if (data.metrics) {
+                        document.getElementById('metricScenes').innerText = data.metrics.scenes || "0";
+                        document.getElementById('metricAssigned').innerText = data.metrics.assigned || "0";
+                        document.getElementById('metricChars').innerText = data.metrics.chars || "-";
+                        document.getElementById('metricBgs').innerText = data.metrics.bgs || "-";
+                        document.getElementById('metricDuration').innerText = data.metrics.duration || "0s";
+                        document.getElementById('statusScenesCount').innerText = data.metrics.statusCount || "0";
+                        document.getElementById('previewScenesCount').innerText = `${data.metrics.scenes || 0} scenes`;
+                    }
+                    updateScriptStats(data.scriptText || "");
+                } catch(e) {
+                    clearWorkspace();
+                }
+            } else {
+                clearWorkspace();
+            }
+        }
+
+        function clearWorkspace() {
+            document.getElementById('sourceScriptInput').value = "";
+            document.getElementById('previewScenesBox').innerText = "Scenes sẽ hiện ở đây sau khi split...";
+            document.getElementById('sceneTableBody').innerHTML = '<tr><td colspan="7" class="p-8 text-center text-gray-500 italic">Chưa có phân cảnh nào.</td></tr>';
+            document.getElementById('glabsPromptContent').value = "";
+            document.getElementById('veosPromptContent').value = "";
+            if(document.getElementById('sceneStyleConfigInput')) document.getElementById('sceneStyleConfigInput').value = "";
+            if(document.getElementById('getPromptImgResultContent')) document.getElementById('getPromptImgResultContent').value = "";
+            document.getElementById('assetsResultContainer').value = "";
+            document.getElementById('cameraGuideContent').value = "";
+            document.getElementById('prodNotesContent').value = "";
+            document.getElementById('voLanguageSelect').value = "Tiếng Việt";
+            document.getElementById('minChar').value = "30";
+            document.getElementById('maxChar').value = "100";
+            document.getElementById('scriptWordCount').innerText = "0 ký tự";
+            document.getElementById('previewScenesCount').innerText = "0 scenes";
+            document.getElementById('statusScenesCount').innerText = "0";
+            document.getElementById('metricScenes').innerText = "0";
+            document.getElementById('metricAssigned').innerText = "0";
+            document.getElementById('metricChars').innerText = "-";
+            document.getElementById('metricBgs').innerText = "-";
+            document.getElementById('metricDuration').innerText = "0s";
+        }
+
+        setInterval(() => {
+            if(currentActiveProject) {
+                saveCurrentProjectData();
+            }
+        }, 3000);
+
+        function showToast(message) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = "bg-cardBg border border-emerald-500/50 text-slate-200 text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 pointer-events-auto toast-show font-medium";
+            toast.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('toast-show');
+                toast.classList.add('toast-hide');
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        }
+
+        function updateScriptStats(text) {
+            document.getElementById('scriptWordCount').innerText = `${text.length.toLocaleString('vi-VN')} ký tự`;
+        }
+
+        document.getElementById('sourceScriptInput').oninput = function() {
+            updateScriptStats(this.value);
+            saveCurrentProjectData();
+        };
+
+        // --- HÀM LỌC SCRIPT ---
+        function smartFilterScript(rawText) {
+            const rawLines = (rawText || '').replace(/\r\n/g, '\n').split('\n');
+            const cleanedLines = [];
+            let removedLines = 0;
+            let inCodeFence = false;
+
+            const fullDropPatterns = [
+                /^\s*```/,
+                /^\s*#{1,6}\s+.+$/,
+                /^\s*-{3,}\s*$/,
+                /^\s*[=_]{3,}\s*$/,
+                /^\s*\[\s*(kiểm tra cài đặt|kiem tra cai dat|thống kê|thong ke|metadata|ghi chú|ghi chu|note|notes|producer notes|production notes|dàn ý|dan y|outline|research summary|tóm tắt|tom tat|source|sources|nguồn|nguon|reference|references|citation)[^\]]*\].*$/i,
+                /^\s*(\[.*\])?\s*(ngôn ngữ|ngon ngu|cấu trúc|cau truc|số phần|so phan|thời lượng|thoi luong|pov|model used|word count|duration|estimated minutes|thực viết|thuc viet)\s*[:：|].*$/i,
+                /^\s*(chủ đề video|chu de video|topic|title|tiêu đề|tieu de)\s*[:：].*$/i,
+                /^\s*(style guide|dna kênh|dna kenh|topic bank|context bổ sung|context bo sung|profile|danh sách file|danhsach file)\s*[:：\-].*$/i,
+                /^\s*(sfx|music|bgm|sound|visual|camera|shot|b-roll|b roll|cut to|transition|scene|cảnh|canh|production note|producer note)\s*[:：].*$/i,
+                /^\s*\((sfx|music|bgm|visual|camera|shot|b-roll|cut|transition|pause|beat|silence)[^)]+\)\s*$/i,
+                /^\s*\[\s*(sfx|music|bgm|visual|camera|shot|b-roll|cut|transition|pause|beat|silence|scene|cảnh|canh)[^\]]*\]\s*$/i,
+                /^\s*(phần|phan|part|chapter|section|level|episode|đoạn|doan)\s*[\dIVXLCDMivxlcdm一二三四五六七八九十]+\s*[:：.)\-–—]?.{0,160}$/i,
+                /^\s*(mở đầu|mo dau|intro|introduction|hook|thân bài|than bai|cao trào|cao trao|kết luận|ket luan|outro|closing|conclusion)\s*[:：.)\-–—]?.{0,160}$/i,
+                /^\s*제\s*\d+\s*(장|부|막)\s*[:：.)\-–—]?.{0,160}$/i,
+                /^\s*(인트로|오프닝|후킹|결론|마무리)\s*[:：.)\-–—]?.{0,160}$/i,
+                /^\s*(第\s*\d+\s*(章|部)|イントロ|オープニング|結論|まとめ)\s*[:：.)\-–—]?.{0,160}$/i
+            ];
+
+            const removePrefixPatterns = [
+                /^\s*(vo|voice\s*over|voiceover|narrator|người dẫn|nguoi dan|lời bình|loi binh|내레이션|나레이션|ナレーション)\s*[:：]\s*/i,
+                /^\s*[-•*]\s+/
+            ];
+
+            const technicalBracketPattern = /\[(kiểm tra cài đặt|kiem tra cai dat|thống kê|thong ke|sfx|music|bgm|visual|camera|shot|b-roll|transition|ghi chú|ghi chu|note|citation|source|nguồn|nguon)[^\]]*\]/gi;
+
+            rawLines.forEach(rawLine => {
+                let line = rawLine.trim();
+
+                if (/^\s*```/.test(line)) {
+                    inCodeFence = !inCodeFence;
+                    removedLines++;
+                    return;
+                }
+                if (inCodeFence) {
+                    removedLines++;
+                    return;
+                }
+
+                if (!line) {
+                    if (cleanedLines.length && cleanedLines[cleanedLines.length - 1] !== '') {
+                        cleanedLines.push('');
+                    }
+                    return;
+                }
+
+                let normalizedLine = line
+                    .replace(/\*\*(.*?)\*\*/g, '$1')
+                    .replace(/__(.*?)__/g, '$1')
+                    .replace(/`([^`]+)`/g, '$1')
+                    .replace(/https?:\/\/\S+|www\.\S+/gi, '')
+                    .replace(/\[[0-9,\s-]+\]/g, '')
+                    .replace(/【[^】]*(source|citation|nguồn|nguon|참고|출처)[^】]*】/gi, '')
+                    .replace(technicalBracketPattern, '')
+                    .trim();
+
+                if (!normalizedLine || fullDropPatterns.some(pattern => pattern.test(normalizedLine))) {
+                    removedLines++;
+                    return;
+                }
+
+                removePrefixPatterns.forEach(pattern => {
+                    normalizedLine = normalizedLine.replace(pattern, '').trim();
+                });
+
+                if (!normalizedLine || fullDropPatterns.some(pattern => pattern.test(normalizedLine))) {
+                    removedLines++;
+                    return;
+                }
+
+                cleanedLines.push(normalizedLine);
+            });
+
+            const cleanedText = cleanedLines.join('\n')
+                .replace(/\n{3,}/g, '\n\n')
+                .replace(/[ \t]{2,}/g, ' ')
+                .trim();
+
+            return {
+                text: cleanedText,
+                removedLines,
+                beforeChars: rawText.length,
+                afterChars: cleanedText.length
+            };
+        }
+
+        document.getElementById('filterScriptBtn').onclick = function() {
+            let rawText = document.getElementById('sourceScriptInput').value;
+            if (!rawText.trim()) {
+                showToast("Chưa có kịch bản để lọc!");
+                return;
+            }
+
+            setActionButtonState('filterScriptBtn', 'loading');
+
+            // setTimeout nhỏ để trình duyệt kịp vẽ trạng thái "cam - đang xử lý" trước khi xong ngay lập tức
+            setTimeout(() => {
+                const filtered = smartFilterScript(rawText);
+                const cleanedText = filtered.text;
+
+                document.getElementById('sourceScriptInput').value = cleanedText;
+                updateScriptStats(cleanedText);
+                saveCurrentProjectData();
+
+                const statusBox = document.getElementById('filterStatusBox');
+                if (statusBox) {
+                    const removedChars = Math.max(0, filtered.beforeChars - filtered.afterChars);
+                    statusBox.innerHTML = `<span class="text-cyan-400 font-semibold">✔ Đã lọc thông minh:</span> Giữ lại phần VO, loại ${filtered.removedLines} dòng metadata/heading/kỹ thuật và ${removedChars.toLocaleString('vi-VN')} ký tự thừa.`;
+                }
+
+                setActionButtonState('filterScriptBtn', cleanedText ? 'success' : 'error');
+                showToast(cleanedText ? "Lọc script thành công!" : "Không còn nội dung VO sau khi lọc.");
+            }, 120);
+        };
+
+        function updateAssetMetrics(textResult) {
+            let charCount = 0;
+            let bgCount = 0;
+            
+            let lines = textResult.split('\n');
+            let currentSection = "";
+            
+            for (let line of lines) {
+                let trimmed = line.trim();
+                if (trimmed.toUpperCase().startsWith("CHARACTERS:")) {
+                    currentSection = "CHARS";
+                    continue;
+                } else if (trimmed.toUpperCase().startsWith("BACKGROUNDS:")) {
+                    currentSection = "BGS";
+                    continue;
+                }
+                
+                if (trimmed.startsWith("-") || trimmed.startsWith("•") || /^(CHARACTERS|BACKGROUNDS)\s*\d+/i.test(trimmed)) {
+                    if (currentSection === "CHARS") charCount++;
+                    else if (currentSection === "BGS") bgCount++;
+                }
+            }
+            
+            if (charCount === 0) {
+                charCount = (textResult.match(/CHARACTERS\s*\d+/gi) || []).length;
+            }
+            if (bgCount === 0) {
+                bgCount = (textResult.match(/BACKGROUNDS\s*\d+/gi) || []).length;
+            }
+
+            document.getElementById('metricChars').innerText = charCount > 0 ? charCount : "-";
+            document.getElementById('metricBgs').innerText = bgCount > 0 ? bgCount : "-";
+        }
+
+       // ====== TRẠNG THÁI TRỰC QUAN CHO CÁC NÚT XỬ LÝ ======
+        // (Lọc Script, Split Scenes, Pre-scan, Assign Assets, Get-Prompt Image)
+        // idle    : giữ nguyên màu/icon gốc của từng nút
+        // loading : nút CHUYỂN SANG MÀU CAM + icon đồng hồ cát xoay vòng, tạm khoá trong lúc xử lý
+        // success : chuyển sang màu XANH LÁ + dấu tích, tự quay lại màu gốc sau ~1.6s
+        // error   : chuyển sang màu ĐỎ + icon cảnh báo, tự quay lại màu gốc sau ~2.5s
+        // -> Bất kỳ nút nào được bấm cũng sẽ hiển thị đúng trạng thái này, không cố định ở 1 nút.
+        function setActionButtonState(btnId, state) {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+
+            // Lưu class + nội dung GỐC của nút, chỉ lưu đúng 1 lần ở lần gọi đầu tiên
+            if (btn.dataset.idleClass === undefined) {
+                btn.dataset.idleClass = btn.className;
+                btn.dataset.idleHtml = btn.innerHTML;
+            }
+
+            clearTimeout(btn._btnStateTimer);
+            const idleClass = btn.dataset.idleClass;
+            const idleHtml = btn.dataset.idleHtml;
+            const shared = "text-xs px-3.5 py-2 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5";
+
+            function htmlWithIcon(iconHtml) {
+                // Thay icon <i>...</i> đầu tiên bằng icon trạng thái mới, giữ nguyên phần chữ
+                if (/<i[^>]*><\/i>/.test(idleHtml)) {
+                    return idleHtml.replace(/<i[^>]*><\/i>/, iconHtml);
+                }
+                return `${iconHtml} ${idleHtml}`;
+            }
+
+            if (state === 'loading') {
+                btn.disabled = true;
+                btn.className = `bg-accentOrange text-white ${shared} shadow-lg shadow-orange-900/30 cursor-wait`;
+                btn.innerHTML = htmlWithIcon('<i class="fa-solid fa-hourglass-half animate-spin text-[11px]"></i>');
+            } else if (state === 'success') {
+                btn.disabled = false;
+                btn.className = `bg-emerald-600 text-white ${shared} shadow-lg shadow-emerald-900/30`;
+                btn.innerHTML = htmlWithIcon('<i class="fa-solid fa-check text-[11px]"></i>');
+                btn._btnStateTimer = setTimeout(() => setActionButtonState(btnId, 'idle'), 1600);
+            } else if (state === 'error') {
+                btn.disabled = false;
+                btn.className = `bg-red-600 text-white ${shared} shadow-lg shadow-red-900/30`;
+                btn.innerHTML = htmlWithIcon('<i class="fa-solid fa-triangle-exclamation text-[11px]"></i>');
+                btn._btnStateTimer = setTimeout(() => setActionButtonState(btnId, 'idle'), 2500);
+            } else {
+                btn.disabled = false;
+                btn.className = idleClass;
+                btn.innerHTML = idleHtml;
+            }
+        }
+
+       // --- TÍCH HỢP NÚT PRE-SCAN QUA API ---
+        document.getElementById('prescanBtn').onclick = async function() {
+            const scriptText = document.getElementById('sourceScriptInput').value.trim();
+            const apiKey = localStorage.getItem('bk_gemini_api_key');
+            const voLang = document.getElementById('voLanguageSelect').value;
+            const minChar = document.getElementById('minChar').value;
+            const maxChar = document.getElementById('maxChar').value;
+
+            if (!apiKey) {
+                showToast("Vui lòng cấu hình Gemini API Key ở Sidebar!");
+                return;
+            }
+            if (!scriptText) {
+                showToast("Chưa có kịch bản để phân tích Pre-scan!");
+                return;
+            }
+
+            setActionButtonState('prescanBtn', 'loading');
+            showToast("Đang phân tích kịch bản và gán tài nguyên qua API...");
+
+            try {
+                let response = await fetch('/api/run-prescan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        api_key: apiKey, 
+                        script_text: scriptText,
+                        vo_lang: voLang,
+                        min_char: minChar,
+                        max_char: maxChar
+                    })
+                });
+                
+                let resJson = await response.json();
+                if (resJson.status === 'success') {
+                    let rawText = resJson.data || "";
+
+                    document.getElementById('assetsResultContainer').value = rawText;
+                    updateAssetMetrics(rawText);
+                    syncAssetsForTool3();
+
+                    setActionButtonState('prescanBtn', 'success');
+                    showToast("Pre-scan hoàn tất! Đã cập nhật Characters & Backgrounds ở tab Assets. Bấm 'Assign Assets' để gán vào từng scene.");
+                    switchTab('assets');
+                    saveCurrentProjectData();
+                } else {
+                    setActionButtonState('prescanBtn', 'error');
+                    showToast("Lỗi Pre-scan: " + resJson.message);
+                }
+            } catch (err) {
+                console.error(err);
+                setActionButtonState('prescanBtn', 'error');
+                showToast("Lỗi kết nối mạng khi gọi Pre-scan.");
+            }
+        };
+
+        // --- GHI Characters/Backgrounds ra cho Tool 3 (Asset Prompts) đọc vào ---
+        // Tool 3 đã có sẵn nút "Load" đọc key 'bk_tools_scene_assets' dạng { characters: [...], backgrounds: [...] }
+        // (mỗi phần tử là NỘI DUNG thuần, không kèm "CHARACTERS 001:"). Ở đây Tool 2 chỉ cần tách đúng
+        // nội dung đó từ ô Assets (assetsResultContainer) rồi ghi ra đúng key, đúng định dạng cho Tool 3.
+        // Cho phép có/không dấu gạch đầu dòng "- " hoặc "• " (định dạng thật mà Pre-scan/Assign Assets trả về).
+        function parseAssetSectionContents(text, prefix) {
+            const regex = new RegExp(`^[-•]?\\s*${prefix}\\s*(\\d+)\\s*:\\s*(.+)$`, 'i');
+            const matches = [];
+            (text || '').split('\n').forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed) return;
+                const m = trimmed.match(regex);
+                if (m) matches.push({ num: parseInt(m[1], 10), content: m[2].trim() });
+            });
+            matches.sort((a, b) => a.num - b.num);
+            return matches.map(m => m.content);
+        }
+
+        function syncAssetsForTool3() {
+            const assetsText = document.getElementById('assetsResultContainer').value || '';
+            const characters = parseAssetSectionContents(assetsText, 'CHARACTERS');
+            const backgrounds = parseAssetSectionContents(assetsText, 'BACKGROUNDS');
+
+            if (characters.length === 0 && backgrounds.length === 0) {
+                return { characters, backgrounds, saved: false };
+            }
+
+            localStorage.setItem('bk_tools_scene_assets', JSON.stringify({
+                characters,
+                backgrounds,
+                project: currentActiveProject,
+                updatedAt: new Date().toISOString()
+            }));
+
+            return { characters, backgrounds, saved: true };
+        }
+
+        // Nút thủ công trong tab ASSETS: bấm để gửi ngay nội dung hiện tại trong ô Assets sang Tool 3
+        // (hữu ích khi bạn tự tay sửa lại ô Assets, không phải lúc nào cũng qua Pre-scan/Assign Assets)
+        function sendAssetsToTool3Manual() {
+            const result = syncAssetsForTool3();
+            if (!result.saved) {
+                showToast("Ô Assets chưa có Character/Background đúng định dạng để gửi sang Tool 3!");
+                return;
+            }
+            showToast(`Đã gửi ${result.characters.length} Character(s) & ${result.backgrounds.length} Background(s) sang Tool 3! Sang Tool 3 bấm nút "Load" để nhận.`);
+        }
+
+        // --- NÚT ASSIGN ASSETS GỌI THỰC TẾ QUA API PYTHON ---
+        document.getElementById('assignAssetsBtn').onclick = async function() {
+            const apiKey = localStorage.getItem('bk_gemini_api_key');
+            const assetsText = document.getElementById('assetsResultContainer').value.trim();
+            const voLang = document.getElementById('voLanguageSelect').value;
+
+            if (!apiKey) {
+                showToast("Vui lòng cấu hình Gemini API Key ở Sidebar!");
+                return;
+            }
+            if (!assetsText) {
+                showToast("Chưa có Assets! Vui lòng chạy Pre-scan trước.");
+                return;
+            }
+
+            let rows = document.querySelectorAll('#sceneTableBody tr');
+            let scenesData = [];
+            
+            rows.forEach((row, idx) => {
+                let cols = row.querySelectorAll('td');
+                if (cols.length >= 3 && !row.innerText.includes("Chưa có phân cảnh")) {
+                    let sId = cols[0].innerText.trim();
+                    let timecode = cols[1].innerText.trim();
+                    let voText = cols[2].innerText.trim();
+                    scenesData.push({
+                        id: sId,
+                        timecode: timecode,
+                        vo: voText
+                    });
+                }
+            });
+
+            if (scenesData.length === 0) {
+                showToast("Chưa có phân cảnh nào trong Scene List! Hãy bấm Split Scenes trước.");
+                return;
+            }
+
+            const styles = {};
+
+            setActionButtonState('assignAssetsBtn', 'loading');
+            showToast("Đang đọc prompt style gốc và thực hiện gán tài nguyên qua API...");
+
+            try {
+               let response = await fetch('/api/assign-assets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        api_key: apiKey, 
+                        scenes_data: scenesData,
+                        assets_text: assetsText,
+                        styles: styles,
+                        vo_lang: voLang,
+                        project_name: currentActiveProject
+                    })
+                });
+                
+                let resJson = await response.json();
+                if (resJson.status === 'success') {
+                    let resData = resJson.data;
+                    
+                    document.getElementById('glabsPromptContent').value = resData.glabs_prompts || "";
+
+                    let assignedScenes = resData.assigned_scenes || [];
+                    let tableRowsHtml = "";
+                    let previewSrtOutput = "";
+                    let totalDuration = 0;
+
+                    let totalCharsCount = parseInt(document.getElementById('metricChars').innerText) || 5;
+                    let totalBgsCount = parseInt(document.getElementById('metricBgs').innerText) || 6;
+
+                    scenesData.forEach((sc, idx) => {
+                        let matched = assignedScenes.find(s => String(s.id) === String(sc.id)) || assignedScenes[idx] || {};
+                        
+                        let charIdNum = (idx % totalCharsCount) + 1;
+                        let bgIdNum = (Math.floor(idx / 2) % totalBgsCount) + 1;
+                        
+                        let character = matched.character || matched.CHARACTERS || `CHARACTERS ${String(charIdNum).padStart(3, '0')}`;
+                        let background = matched.background || matched.BACKGROUNDS || `BACKGROUNDS ${String(bgIdNum).padStart(3, '0')}`;
+                        let camera = matched.camera || matched.CAMERA || "medium shot";
+                        
+                        let duration = Math.max(2.5, sc.vo.length / 15);
+                        totalDuration += duration;
+                        let formattedDuration = duration.toFixed(1) + "s";
+
+                        previewSrtOutput += `${idx + 1}\n${sc.timecode}\n${sc.vo}\n\n`;
+
+                        let characterBadges = character.split(';').map(c => `
+                            <span class="bg-emerald-950 text-emerald-400 px-2.5 py-1 rounded text-[11px] border border-emerald-800/50 font-medium inline-block my-1 mr-1">
+                                ${c.trim()}
+                            </span>
+                        `).join('');
+
+                        let backgroundBadges = background.split(';').map(b => `
+                            <span class="bg-blue-950 text-blue-400 px-2.5 py-1 rounded text-[11px] border border-blue-800/50 font-medium inline-block my-1 mr-1">
+                                ${b.trim()}
+                            </span>
+                        `).join('');
+
+                        tableRowsHtml += `
+                            <tr class="hover:bg-darkBg/60 transition align-top">
+                                <td class="p-3 font-mono text-orange-400 font-semibold w-16">${sc.id}</td>
+                                <td class="p-3 font-mono text-cyan-300 text-[11px] w-36">${sc.timecode}</td>
+                                <td class="p-3 text-slate-200 break-words">${sc.vo}</td>
+                                <td class="p-3 w-52 editable-cell cursor-pointer" title="Click để sửa thủ công"><div class="flex flex-col items-start gap-1">${characterBadges}</div></td>
+                                <td class="p-3 w-48 editable-cell cursor-pointer" title="Click để sửa thủ công"><div class="flex flex-col items-start gap-1">${backgroundBadges}</div></td>
+                                <td class="p-3 text-slate-300 font-medium w-28 break-words editable-cell cursor-pointer" title="Click để sửa thủ công">${camera}</td>
+                                <td class="p-3 text-amber-300 font-mono w-20 whitespace-nowrap">${formattedDuration}</td>
+                            </tr>
+                        `;
+                    });
+
+                    document.getElementById('sceneTableBody').innerHTML = tableRowsHtml;
+                    document.getElementById('previewScenesBox').innerText = previewSrtOutput.trim();
+
+                    document.getElementById('metricAssigned').innerText = scenesData.length;
+                    document.getElementById('metricDuration').innerText = `${Math.round(totalDuration)}s`;
+
+                    setActionButtonState('assignAssetsBtn', 'success');
+                    showToast("Assign Assets thành công qua API! Đã áp dụng prompt style của dự án.");
+                    switchTab('scene-list');
+                    saveCurrentProjectData();
+                    syncAssetsForTool3();
+                } else {
+                    setActionButtonState('assignAssetsBtn', 'error');
+                    showToast("Lỗi từ API Assign Assets: " + resJson.message);
+                }
+            } catch (err) {
+                console.error(err);
+                setActionButtonState('assignAssetsBtn', 'error');
+                showToast("Lỗi kết nối mạng khi gọi Assign Assets.");
+            }
+        };
+
+        // --- NÚT GET-PROMPT IMAGE GỌI THỰC TẾ QUA API PYTHON (modules/get_prompt_image_handler.py) ---
+        document.getElementById('getPromptImgBtn').onclick = async function() {
+            const apiKey = localStorage.getItem('bk_gemini_api_key');
+            const sceneStyle = document.getElementById('sceneStyleConfigInput').value.trim();
+            // Kết quả Pre-scan: chứa mô tả thật của từng CHARACTERS/BACKGROUNDS ID.
+            // Gửi kèm để AI viết prompt bám đúng nhân vật & bối cảnh của scene.
+            const assetsText = document.getElementById('assetsResultContainer').value.trim();
+
+            if (!apiKey) {
+                showToast("Vui lòng cấu hình Gemini API Key ở Sidebar!");
+                return;
+            }
+
+            // Lấy character/background đã gán sẵn từ Scene List (kết quả Pre-scan/Assign Assets ở G-LABS IMAGE PROMPTS)
+            let rows = document.querySelectorAll('#sceneTableBody tr');
+            let scenesData = [];
+
+            rows.forEach((row) => {
+                let cols = row.querySelectorAll('td');
+                if (cols.length >= 6 && !row.innerText.includes("Chưa có phân cảnh")) {
+                    let sId = cols[0].innerText.trim();
+                    let voText = cols[2].innerText.trim();
+
+                    // Lấy nguyên văn text của character và background từ các thẻ badge (đúng dữ liệu G-Labs đã tạo)
+                    let charBadges = Array.from(cols[3].querySelectorAll('span')).map(s => s.innerText.trim()).join('; ');
+                    let bgBadges = Array.from(cols[4].querySelectorAll('span')).map(s => s.innerText.trim()).join('; ');
+                    // Cột 6 = Camera. Trước đây bị bỏ sót nên prompt cuối luôn mất góc máy.
+                    let cameraText = cols[5] ? cols[5].innerText.trim() : '';
+
+                    scenesData.push({
+                        id: sId,
+                        vo: voText,
+                        character: charBadges,
+                        background: bgBadges,
+                        camera: cameraText
+                    });
+                }
+            });
+
+            if (scenesData.length === 0) {
+                showToast("Chưa có phân cảnh nào trong Scene List! Hãy bấm Pre-scan hoặc Assign Assets trước.");
+                return;
+            }
+
+            setActionButtonState('getPromptImgBtn', 'loading');
+            showToast("Đang gọi API để tạo Prompt Image từ Scene List & Style...");
+
+            try {
+                let response = await fetch('/api/get-prompt-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        api_key: apiKey,
+                        scenes_data: scenesData,
+                        scene_style: sceneStyle,
+                        assets_text: assetsText
+                    })
+                });
+
+                let resJson = await response.json();
+                if (resJson.status === 'success') {
+                    let resData = resJson.data;
+                    document.getElementById('getPromptImgResultContent').value = resData.glabs_prompts || "";
+
+                    setActionButtonState('getPromptImgBtn', 'success');
+                    switchTab('get-prompt-image');
+                    saveCurrentProjectData();
+                    showToast("Đã tạo Get-Prompt Image thành công qua API!");
+                } else {
+                    setActionButtonState('getPromptImgBtn', 'error');
+                    showToast("Lỗi từ API Get-Prompt Image: " + resJson.message);
+                }
+            } catch (err) {
+                console.error(err);
+                setActionButtonState('getPromptImgBtn', 'error');
+                showToast("Lỗi kết nối mạng khi gọi Get-Prompt Image.");
+            }
+        };
+
+        // --- GET-PROMPT VIDEO: đọc prompt ảnh + VO -> prompt image-to-video ---
+        document.getElementById('getPromptVideoBtn').onclick = async function() {
+            const apiKey = localStorage.getItem('bk_gemini_api_key');
+            if (!apiKey) {
+                showToast("Vui lòng cấu hình Gemini API Key ở Sidebar!");
+                return;
+            }
+
+            // Nguồn bắt buộc: kết quả Get-Prompt Image. Prompt video được viết
+            // dựa trên chính nội dung từng prompt ảnh nên thiếu là không chạy được.
+            const imagePrompts = document.getElementById('getPromptImgResultContent').value.trim();
+            if (!imagePrompts) {
+                showToast("Chưa có Get-Prompt Image! Hãy bấm 'Get-Prompt - image' trước.");
+                switchTab('get-prompt-image');
+                return;
+            }
+
+            // Đọc Scene List để lấy VO / nhân vật / bối cảnh / góc máy theo ID
+            let rows = document.querySelectorAll('#sceneTableBody tr');
+            let scenesData = [];
+            rows.forEach((row) => {
+                let cols = row.querySelectorAll('td');
+                if (cols.length >= 6 && !row.innerText.includes("Chưa có phân cảnh")) {
+                    let charBadges = Array.from(cols[3].querySelectorAll('span')).map(s => s.innerText.trim()).join('; ');
+                    let bgBadges = Array.from(cols[4].querySelectorAll('span')).map(s => s.innerText.trim()).join('; ');
+                    scenesData.push({
+                        id: cols[0].innerText.trim(),
+                        vo: cols[2].innerText.trim(),
+                        character: charBadges,
+                        background: bgBadges,
+                        camera: cols[5] ? cols[5].innerText.trim() : ''
+                    });
+                }
+            });
+
+            if (scenesData.length === 0) {
+                showToast("Chưa có phân cảnh nào trong Scene List!");
+                return;
+            }
+
+            setActionButtonState('getPromptVideoBtn', 'loading');
+            showToast(`Đang đọc ${scenesData.length} prompt ảnh và viết prompt video tương ứng...`);
+
+            try {
+                let response = await fetch('/api/get-prompt-video', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        api_key: apiKey,
+                        scenes_data: scenesData,
+                        image_prompts_text: imagePrompts,
+                        motion_style: document.getElementById('sceneStyleConfigInput').value.trim(),
+                        vo_lang: document.getElementById('voLanguageSelect').value
+                    })
+                });
+
+                let resJson = await response.json();
+                if (resJson.status === 'success') {
+                    const d = resJson.data || {};
+                    document.getElementById('veosPromptContent').value = d.veos_prompts || "";
+
+                    setActionButtonState('getPromptVideoBtn', 'success');
+                    switchTab('veos-prompts');
+                    saveCurrentProjectData();
+
+                    let msg = `Đã tạo ${d.total || 0} prompt video (khớp ${d.matched || 0} prompt ảnh)`;
+                    if (d.fallback_count) msg += ` — ${d.fallback_count} scene dùng luật dự phòng`;
+                    showToast(msg);
+                } else {
+                    setActionButtonState('getPromptVideoBtn', 'error');
+                    showToast("Lỗi Get-Prompt Video: " + resJson.message);
+                }
+            } catch (err) {
+                console.error(err);
+                setActionButtonState('getPromptVideoBtn', 'error');
+                showToast("Lỗi kết nối mạng khi gọi Get-Prompt Video.");
+            }
+        };
+
+        // --- HÀM DOWNLOAD CHO GET-PROMPT IMAGE ---
+        function downloadGetPromptImgTxt() {
+            const content = document.getElementById('getPromptImgResultContent').value;
+            if (!content || content.trim() === "") {
+                showToast("Không có nội dung Prompt Image để tải xuống!");
+                return;
+            }
+
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            
+            a.href = url;
+            a.download = `${currentActiveProject}_get_prompt_image.txt`;
+            
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+
+            showToast("Đã tải xuống file Get-Prompt Image (.txt) thành công!");
+        }
+
+        function toggleSceneRenamer() {
+            const body = document.getElementById('sceneRenamerBody');
+            const chevron = document.getElementById('renamerChevron');
+            if (body.classList.contains('hidden')) {
+                body.classList.remove('hidden');
+                chevron.style.transform = 'rotate(0deg)';
+            } else {
+                body.classList.add('hidden');
+                chevron.style.transform = 'rotate(-90deg)';
+            }
+        }
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('imageFilesInput');
+        dropZone.onclick = () => fileInput.click();
+
+        fileInput.onchange = (e) => {
+            uploadedFiles = Array.from(e.target.files);
+            updateFileStatus();
+        };
+
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-accentOrange'); };
+        dropZone.ondragleave = () => { dropZone.classList.remove('border-accentOrange'); };
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-accentOrange');
+            uploadedFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            updateFileStatus();
+        };
+
+        function updateFileStatus() {
+            const statusEl = document.getElementById('fileUploadStatus');
+            if (uploadedFiles.length > 0) {
+                statusEl.innerText = `✔ Đã chọn ${uploadedFiles.length} file ảnh sẵn sàng đổi tên.`;
+                statusEl.classList.remove('hidden');
+            } else {
+                statusEl.classList.add('hidden');
+            }
+        }
+
+        async function processRenameScenes() {
+            if (uploadedFiles.length === 0) {
+                showToast("Vui lòng chọn hoặc kéo thả ít nhất một file ảnh!");
+                return;
+            }
+
+            let startNum = parseInt(document.getElementById('startNumberInput').value) || 1;
+            
+            const formData = new FormData();
+            uploadedFiles.forEach(file => {
+                formData.append('images', file);
+            });
+            formData.append('start_number', startNum);
+
+            showToast("Đang xử lý đổi tên và đóng gói file ZIP...");
+
+            try {
+                let response = await fetch('/api/rename-and-zip', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    let blob = await response.blob();
+                    let url = window.URL.createObjectURL(blob);
+                    let a = document.createElement('a');
+                    a.href = url;
+                    a.download = `renamed_scenes_${Date.now()}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+
+                    showToast(`Thành công! Đã đổi tên và tải xuống file ZIP cho ${uploadedFiles.length} ảnh.`);
+                } else {
+                    let errJson = await response.json();
+                    showToast("Lỗi: " + (errJson.message || "Không thể xử lý file ảnh!"));
+                }
+            } catch (err) {
+                console.error(err);
+                showToast("Lỗi kết nối mạng khi gửi file ảnh lên server.");
+            }
+        }
+
+        function switchTab(tabId) {
+            saveCurrentProjectData();
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.remove('block');
+                el.classList.add('hidden');
+            });
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('border-orange-500', 'text-orange-400', 'font-semibold');
+                el.classList.add('border-transparent', 'text-slate-400');
+            });
+
+            const targetContent = document.getElementById('tab-' + tabId);
+            if (targetContent) {
+                targetContent.classList.remove('hidden');
+                targetContent.classList.add('block');
+            }
+            
+            const activeBtn = document.getElementById('btn-' + tabId);
+            if (activeBtn) {
+                activeBtn.classList.remove('border-transparent', 'text-slate-400');
+                activeBtn.classList.add('border-orange-500', 'text-orange-400', 'font-semibold');
+            }
+        }
+
+        function executeSplitScenes() {
+            const text = document.getElementById('sourceScriptInput').value.trim();
+            if (!text) return;
+
+            const minC = parseInt(document.getElementById('minChar').value) || 30;
+            const maxC = parseInt(document.getElementById('maxChar').value) || 100;
+
+            let rawSentences = text.split(/(?<=[.!?])\s+/).filter(s => s.length > 0);
+            let scenes = [];
+            let currentScene = "";
+
+            for (let s of rawSentences) {
+                let testString = (currentScene + " " + s).trim();
+                if (currentScene === "") {
+                    currentScene = s;
+                } else if (testString.length <= maxC) {
+                    currentScene = testString;
+                } else {
+                    scenes.push(currentScene);
+                    currentScene = s;
+                }
+                
+                if (currentScene.length >= minC && currentScene.length <= maxC && (s.endsWith('.') || s.endsWith('!') || s.endsWith('?'))) {
+                    scenes.push(currentScene);
+                    currentScene = "";
+                }
+            }
+            if (currentScene.length > 0) {
+                scenes.push(currentScene);
+            }
+
+            function formatSRTTime(totalSeconds) {
+                let hrs = Math.floor(totalSeconds / 3600);
+                let mins = Math.floor((totalSeconds % 3600) / 60);
+                let secs = Math.floor(totalSeconds % 60);
+                let millis = Math.floor((totalSeconds % 1) * 1000);
+                return `${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')},${String(millis).padStart(3,'0')}`;
+            }
+
+            let currentTime = 0;
+            let previewSrtOutput = "";
+            let tableRowsHtml = "";
+
+            scenes.forEach((sentence, idx) => {
+                let idNum = idx + 1;
+                let idStr = String(idNum).padStart(3, '0');
+                let durationSec = Math.max(2.5, sentence.length / 15);
+                let startTime = currentTime;
+                let endTime = currentTime + durationSec;
+                currentTime = endTime;
+
+                let srtTimecode = `${formatSRTTime(startTime)} --> ${formatSRTTime(endTime)}`;
+                previewSrtOutput += `${idNum}\n${srtTimecode}\n${sentence}\n\n`;
+
+                tableRowsHtml += `
+                    <tr class="hover:bg-darkBg/60 transition align-top">
+                        <td class="p-3 font-mono text-orange-400 font-semibold w-16">${idStr}</td>
+                        <td class="p-3 font-mono text-cyan-300 text-[11px] w-36">${srtTimecode}</td>
+                        <td class="p-3 text-slate-200 break-words">${sentence}</td>
+                        <td class="p-3 w-52 break-words editable-cell cursor-pointer" title="Click để sửa thủ công"><span class="text-gray-500 italic text-[11px] inline-block my-0.5">Chờ Scene...</span></td>
+                        <td class="p-3 w-48 break-words editable-cell cursor-pointer" title="Click để sửa thủ công"><span class="text-gray-500 italic text-[11px] inline-block my-0.5">Chờ Scene...</span></td>
+                        <td class="p-3 text-slate-300 font-medium w-28 break-words editable-cell cursor-pointer" title="Click để sửa thủ công">medium shot</td>
+                        <td class="p-3 text-amber-300 font-mono w-20 whitespace-nowrap">${durationSec.toFixed(1)}s</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('previewScenesBox').innerText = previewSrtOutput.trim();
+            document.getElementById('sceneTableBody').innerHTML = tableRowsHtml;
+            
+            document.getElementById('previewScenesCount').innerText = `${scenes.length} scenes`;
+            document.getElementById('statusScenesCount').innerText = scenes.length;
+            document.getElementById('metricScenes').innerText = scenes.length;
+            document.getElementById('metricAssigned').innerText = "0";
+            document.getElementById('metricDuration').innerText = `${Math.round(currentTime)}s`;
+
+            document.getElementById('glabsPromptContent').value = "Bấm 'Assign Assets' để tạo G-Labs Prompts...";
+            document.getElementById('veosPromptContent').value = "Bấm 'Assign Assets' để tạo Veos Prompts...";
+            document.getElementById('cameraGuideContent').value = "Bấm 'Assign Assets' để lấy Camera Guide...";
+            document.getElementById('prodNotesContent').value = `PRODUCER NOTES:\n- Tổng số phân cảnh: ${scenes.length}\n- Tổng thời lượng: ${Math.round(currentTime)}s`;
+
+            saveCurrentProjectData();
+        }
+
+        document.getElementById('splitScenesBtn').onclick = function() {
+            const text = document.getElementById('sourceScriptInput').value.trim();
+            if (!text) {
+                showToast("Chưa có kịch bản! Vui lòng nhập hoặc lọc script.");
+                return;
+            }
+            setActionButtonState('splitScenesBtn', 'loading');
+            setTimeout(() => {
+                executeSplitScenes();
+                setActionButtonState('splitScenesBtn', 'success');
+                showToast("Đã phân tách cảnh theo cấu hình thành công!");
+            }, 120);
+        };
+
+        let autoSplitTimer = null;
+        ['minChar', 'maxChar', 'voLanguageSelect'].forEach(id => {
+            document.getElementById(id).onchange = function() {
+                saveCurrentProjectData();
+                if (document.getElementById('sourceScriptInput').value.trim().length > 0) {
+                    clearTimeout(autoSplitTimer);
+                    autoSplitTimer = setTimeout(() => {
+                        executeSplitScenes();
+                        showToast("Đã tự động cập nhật lại phân cảnh theo thông số mới!");
+                    }, 400);
+                }
+            };
+        });
+
+        const profileModal = document.getElementById('profileModal');
+        document.getElementById('openProfileModalBtn').onclick = () => { profileModal.classList.remove('hidden'); profileModal.classList.add('flex'); loadProfiles(); };
+        document.getElementById('closeProfileModal').onclick = () => { profileModal.classList.remove('flex'); profileModal.classList.add('hidden'); };
+        document.getElementById('closeProfileModalBottom').onclick = () => { profileModal.classList.remove('flex'); profileModal.classList.add('hidden'); };
+
+        function loadProfiles() {
+            fetch('/api/profiles')
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === 'success') {
+                        const container = document.getElementById('profileListContainer');
+                        if(!container) return;
+                        if(data.data.length === 0) {
+                            container.innerHTML = '<div class="text-center text-gray-500 text-sm py-8">Chưa có profile nào.</div>';
+                            return;
+                        }
+                        container.innerHTML = data.data.map(p => `
+                            <div class="bg-cardBg border border-borderDark p-3.5 rounded-lg flex justify-between items-center">
+                                <div>
+                                    <div class="text-sm font-bold text-gray-200">${p.ten_kenh} (${p.id})</div>
+                                    <div class="text-xs text-gray-400">Ngách: ${p.ngach || 'Chưa phân loại'}</div>
+                                </div>
+                                <button class="text-xs text-accentOrange border border-accentOrange/40 hover:bg-accentOrange hover:text-white px-3 py-1 rounded transition cursor-pointer" onclick="selectProfile('${p.id}', '${p.ten_kenh}')">Chọn</button>
+                            </div>
+                        `).join('');
+                    }
+                });
+        }
+
+        function selectProfile(id, name) {
+            currentActiveProfileId = id;
+            document.getElementById('activeProfileId').innerText = id;
+            const nameEl = document.getElementById('activeProfileName');
+            nameEl.innerText = name;
+            nameEl.className = "text-sm text-emerald-400 font-semibold italic";
+            profileModal.classList.remove('flex');
+            profileModal.classList.add('hidden');
+        }
+
+        function getPromptBySceneId() {
+            const map = {};
+            const lines = (document.getElementById('glabsPromptContent')?.value || '').split('\n');
+            lines.forEach(line => {
+                const match = line.match(/^\[(\d{1,3})\]\s*(.+)$/);
+                if (match) {
+                    map[match[1].padStart(3, '0')] = line.trim();
+                }
+            });
+            return map;
+        }
+
+        function parseTimecodeRange(timecode) {
+            const parts = String(timecode || '').split('-->');
+            return {
+                start: (parts[0] || '').trim(),
+                end: (parts[1] || '').trim()
+            };
+        }
+
+        function downloadSceneListXlsx() {
+            const rows = [];
+            const promptMap = getPromptBySceneId();
+            document.querySelectorAll('#sceneTableBody tr').forEach((row, idx) => {
+                const cols = row.querySelectorAll('td');
+                if (cols.length < 7 || row.innerText.includes('Chưa có phân cảnh')) return;
+
+                const id = (cols[0].innerText || String(idx + 1)).trim().padStart(3, '0');
+                const timeRange = parseTimecodeRange(cols[1].innerText);
+                rows.push({
+                    id,
+                    level: 'Main',
+                    start: timeRange.start,
+                    end: timeRange.end,
+                    duration: (cols[6].innerText || '').trim().replace('s', ''),
+                    vo: (cols[2].innerText || '').trim(),
+                    character: (cols[3].innerText || '').trim().replace(/\n+/g, '; '),
+                    background: (cols[4].innerText || '').trim().replace(/\n+/g, '; '),
+                    camera: (cols[5].innerText || '').trim(),
+                    prompt: promptMap[id] || ''
+                });
+            });
+
+            if (rows.length === 0) {
+                showToast('Chưa có Scene List để xuất XLSX!');
+                return;
+            }
+
+            fetch('/api/export-scene-list-xlsx', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ project_name: currentActiveProject, rows })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Không thể tạo file XLSX');
+                return response.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${currentActiveProject}_scene_list.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                showToast('Đã tải xuống Scene List XLSX thành công!');
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Lỗi export XLSX: ' + err.message);
+            });
+        }
+
+        function downloadGlabsTxt() {
+            const content = document.getElementById('glabsPromptContent').value;
+            if (!content || content.trim() === "" || content.includes("Bấm 'Assign Assets'")) {
+                showToast("Không có nội dung G-Labs Prompts để tải xuống!");
+                return;
+            }
+
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            
+            a.href = url;
+            a.download = `${currentActiveProject}_glabs_prompts.txt`;
+            
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+
+            showToast("Đã tải xuống file G-Labs Prompts (.txt) thành công!");
+        }
+
+        document.getElementById('sidebarSaveKeyBtn').onclick = () => {
+            const apiKey = document.getElementById('sidebarApiKeyInput').value.trim();
+            if(!apiKey) return;
+            localStorage.setItem('bk_gemini_api_key', apiKey);
+            document.getElementById('apiKeyStatus').className = "text-emerald-400 font-semibold";
+            document.getElementById('apiKeyStatus').innerText = "✔ Đã cấu hình";
+            showToast("Đã lưu API Key thành công!");
+        };
+    </script>
+    <script src="/static/global-sync.js"></script>
+</body>
+</html>
