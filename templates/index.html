@@ -653,11 +653,16 @@
             moreDropdownMenu.classList.toggle('hidden');
         };
 
-        window.onclick = () => {
+        // Dùng addEventListener thay vì window.onclick: gán window.onclick sẽ
+        // GHI ĐÈ mọi handler click toàn cục khác đã đăng ký trước đó.
+        // Thêm điều kiện bỏ qua click ngay trong menu, nếu không menu bị đóng
+        // trước khi nút Xóa/Đổi tên kịp chạy.
+        document.addEventListener('click', (e) => {
+            if (moreDropdownMenu.contains(e.target)) return;
             if (!moreDropdownMenu.classList.contains('hidden')) {
                 moreDropdownMenu.classList.add('hidden');
             }
-        };
+        });
 
         // --- TỰ ĐỘNG LƯU DỮ LIỆU THÀNH FILE .JSON TRONG THƯ MỤC CỐ ĐỊNH PROJECTS/ ---
         function autoSaveCurrentTab() {
@@ -818,9 +823,17 @@
         }
 
         function deleteActiveProject() {
+            moreDropdownMenu.classList.add('hidden');
+
             const select = document.getElementById('projectSelectDropdown');
-            const currentProj = select.value;
-            if (!currentProj || currentProj === "New...") return;
+            const currentProj = select ? select.value : '';
+            if (!currentProj || currentProj === "New...") {
+                alert('Chưa chọn project nào để xóa.');
+                return;
+            }
+            if (!confirm(`Xóa project "${currentProj}"?\nToàn bộ dữ liệu của project này sẽ mất và không khôi phục được.`)) {
+                return;
+            }
 
             fetch('/api/projects/delete', {
                 method: 'POST',
@@ -829,12 +842,27 @@
             })
             .then(res => res.json())
             .then(data => {
-                if (data.status === 'success') {
-                    currentActiveProject = "";
-                    localStorage.removeItem('bk_last_active_project');
-                    initProjects().then(() => { select.value = ""; });
-                    resetForm();
+                if (data.status !== 'success') {
+                    // Trước đây nhánh lỗi bị bỏ trống nên xóa thất bại mà
+                    // giao diện im lặng — người dùng tưởng nút không hoạt động.
+                    alert('Không xóa được project: ' + (data.message || 'lỗi không rõ'));
+                    return;
                 }
+
+                // Dọn luôn dữ liệu localStorage mà các tool khác lưu cho
+                // project này, nếu không project "đã xóa" vẫn hiện lại.
+                ['bk_project_data_', 'bk_scene_breakdown_data_',
+                 'bk_camera_data_', 'bk_thumbnail_data_'].forEach(prefix => {
+                    localStorage.removeItem(prefix + currentProj);
+                });
+
+                currentActiveProject = "";
+                localStorage.removeItem('bk_last_active_project');
+                initProjects().then(() => { if (select) select.value = ""; });
+                resetForm();
+            })
+            .catch(err => {
+                alert('Lỗi kết nối khi xóa project: ' + err.message);
             });
         }
 
@@ -1118,7 +1146,7 @@
                     container.innerHTML = `
                         <div class="flex flex-col items-center justify-center space-y-3 py-4">
                             <i class="fa-solid fa-spinner fa-spin text-3xl text-accentOrange"></i>
-                            <div class="font-medium text-gray-300">Đang đọc tài liệu gốc và tạo topics qua Gemini API...</div>
+                            <div class="font-medium text-gray-300">Đang đọc tài liệu gốc và tạo topics...</div>
                         </div>
                     `;
 
