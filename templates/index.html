@@ -562,6 +562,12 @@
                         const selectDropdown = document.getElementById('projectSelectDropdown');
                         if (selectDropdown) selectDropdown.value = savedProj;
                         loadProjectData(savedProj);
+
+                        // Ghi danh sách project + project đang mở vào kho dùng chung.
+                        // Tool 1-7 chỉ đọc localStorage (không gọi API), nên thiếu
+                        // bước này thì chúng luôn hiện "Default_Project".
+                        localStorage.setItem('bk_projects_list', JSON.stringify(projects));
+                        localStorage.setItem('bk_last_active_project', savedProj);
                     }
                 });
 
@@ -575,14 +581,17 @@
         };
 
         function initProjects() {
-            fetch('/api/projects/list')
+            // Trả về Promise để nơi gọi có thể chờ dropdown nạp xong rồi mới
+            // đọc giá trị — trước đây gọi đồng bộ ngay sau initProjects() sẽ
+            // đọc nhầm danh sách cũ.
+            return fetch('/api/projects/list')
                 .then(res => res.json())
                 .then(data => {
                     if (data.status === 'success') {
                         let projects = data.data;
                         const selectDropdown = document.getElementById('projectSelectDropdown');
-                        if (!selectDropdown) return;
-                        
+                        if (!selectDropdown) return projects;
+
                         selectDropdown.innerHTML = '<option value="">New...</option>';
                         projects.forEach(proj => {
                             let opt = document.createElement('option');
@@ -591,7 +600,15 @@
                             selectDropdown.appendChild(opt);
                         });
                         if(currentActiveProject) selectDropdown.value = currentActiveProject;
+
+                        // Đẩy danh sách mới nhất sang kho dùng chung cho Tool 1-7
+                        localStorage.setItem('bk_projects_list', JSON.stringify(projects));
+                        if (currentActiveProject) {
+                            localStorage.setItem('bk_last_active_project', currentActiveProject);
+                        }
+                        return projects;
                     }
+                    return [];
                 });
         }
 
@@ -679,6 +696,19 @@
             });
         });
 
+        // Đồng bộ danh sách project từ dropdown của Tool 0 sang localStorage,
+        // để Tool 1-7 (chỉ đọc localStorage) luôn thấy đúng project hiện hành.
+        function syncProjectListToStorage(activeName) {
+            const select = document.getElementById('projectSelectDropdown');
+            if (select) {
+                const projects = Array.from(select.options)
+                    .map(o => o.value)
+                    .filter(v => v && v !== "New...");
+                localStorage.setItem('bk_projects_list', JSON.stringify(projects));
+            }
+            if (activeName) localStorage.setItem('bk_last_active_project', activeName);
+        }
+
         function handleProjectSelect(selectElement) {
             const selectedProj = selectElement.value;
             if (selectedProj === "") {
@@ -686,6 +716,7 @@
             } else if (selectedProj) {
                 currentActiveProject = selectedProj;
                 localStorage.setItem('bk_last_active_project', selectedProj);
+                syncProjectListToStorage(selectedProj);
                 loadProjectData(selectedProj);
             }
         }
@@ -748,10 +779,12 @@
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ project_name: oldName })
                             }).then(() => {
-                                initProjects();
-                                select.value = newName;
+                                // Gán trước rồi mới nạp lại danh sách, để
+                                // initProjects() ghi đúng project đang mở
+                                // xuống localStorage cho các tool khác.
                                 currentActiveProject = newName;
                                 localStorage.setItem('bk_last_active_project', newName);
+                                initProjects().then(() => { select.value = newName; });
                             });
                         });
                     }
@@ -797,10 +830,9 @@
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
-                    initProjects();
-                    select.value = "";
                     currentActiveProject = "";
                     localStorage.removeItem('bk_last_active_project');
+                    initProjects().then(() => { select.value = ""; });
                     resetForm();
                 }
             });
@@ -903,11 +935,12 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ project_name: projectName, content: {} })
             }).then(() => {
-                initProjects();
-                const projectSelect = document.getElementById('projectSelectDropdown');
-                projectSelect.value = projectName;
                 currentActiveProject = projectName;
                 localStorage.setItem('bk_last_active_project', projectName);
+                initProjects().then(() => {
+                    const projectSelect = document.getElementById('projectSelectDropdown');
+                    if (projectSelect) projectSelect.value = projectName;
+                });
 
                 projectCount++;
                 newProjectModal.classList.remove('flex');

@@ -200,14 +200,20 @@
     }
 
     function applySyncedData() {
-        // Project list luôn áp dụng, không phụ thuộc cờ đã-đồng-bộ,
-        // vì đây là dữ liệu điều hướng chứ không phải nội dung sản xuất.
+        // Project và Profile là dữ liệu ĐIỀU HƯỚNG — luôn áp dụng, không
+        // phụ thuộc cờ đã-đồng-bộ. Trước đây profile bị chặn sau cờ này nên
+        // chọn profile ở Tool 0 xong, các tool khác vẫn hiện "Chưa chọn
+        // profile" cho tới khi bấm nút HH-Media tools.
         applyProjects();
 
         const data = shared();
+        applyProfileArea(data);
+
         const hasData = Object.keys(data).length > 0;
         if (!hasData && localStorage.getItem(SYNCED_FLAG) !== "1") return;
-        applyProfileArea(data);
+
+        // Prompt style và API key mới là nội dung sản xuất -> giữ nguyên
+        // điều kiện cũ để không ghi đè thứ người dùng đang gõ dở.
         applyPrompts(data);
         const ok = applyApiKey(data);
         if (ok && localStorage.getItem(SYNCED_FLAG) === "1") {
