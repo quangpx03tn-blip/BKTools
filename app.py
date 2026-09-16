@@ -26,9 +26,14 @@ except Exception:
 # Khởi động ứng dụng Flask, tự động nhận diện thư mục 'templates' cùng cấp
 app = Flask(__name__)
 
-# --- CẤU HÌNH XÁC THỰC MẬT KHẨU (AUTHENTICATION) ---
-# Username/Password KHÔNG ghi cứng trong code mà lấy từ biến môi trường,
-# để khi deploy lên Railway bạn chỉ cần khai báo trong Variables.
+# --- CẤU HÌNH XÁC THỰC (AUTHENTICATION) ---
+# Hai cơ chế song song:
+#   1. Google OAuth (ưu tiên) — mỗi Gmail là một tài khoản độc lập, dữ liệu
+#      project/profile tách riêng. Bật khi có GOOGLE_CLIENT_ID + SECRET.
+#   2. Username/Password dùng chung — cơ chế cũ, dùng khi chưa cấu hình OAuth.
+from modules import auth as auth_module
+from authlib.integrations.flask_client import OAuth
+
 AUTH_USERNAME = os.environ.get("APP_USERNAME", "")
 AUTH_PASSWORD = os.environ.get("APP_PASSWORD", "")
 # SECRET_KEY dùng để ký session cookie. Nếu không đặt, sinh ngẫu nhiên (login
@@ -38,7 +43,28 @@ app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
 app.permanent_session_lifetime = 60 * 60 * 24 * 7
 
 # Những route KHÔNG cần đăng nhập (trang login/logout/tài nguyên tĩnh)
-PUBLIC_PATHS = {"/login", "/logout", "/favicon.ico"}
+PUBLIC_PATHS = {"/login", "/logout", "/favicon.ico",
+                "/login/google", "/auth/google/callback"}
+
+# --- ĐĂNG KÝ GOOGLE OAUTH ---
+oauth = OAuth(app)
+if auth_module.google_oauth_enabled():
+    oauth.register(
+        name="google",
+        client_id=auth_module.GOOGLE_CLIENT_ID,
+        client_secret=auth_module.GOOGLE_CLIENT_SECRET,
+        server_metadata_url=auth_module.GOOGLE_DISCOVERY_URL,
+        client_kwargs={"scope": "openid email profile"},
+    )
+
+
+def auth_required() -> bool:
+    """
+    Hệ thống có bắt buộc đăng nhập hay không.
+
+    Chạy local mà chưa khai gì cả -> không bắt buộc, vào thẳng cho tiện.
+    """
+    return auth_module.google_oauth_enabled() or bool(AUTH_USERNAME and AUTH_PASSWORD)
 
 
 def login_required_html(view_fn):
@@ -56,10 +82,10 @@ def require_auth():
     """Chặn MỌI request khi chưa đăng nhập.
     - Trang HTML: redirect tới /login
     - API (đường dẫn /api/...): trả về JSON 401
-    - Nếu chưa cấu hình APP_USERNAME/APP_PASSWORD thì bỏ qua (tiện chạy local)
+    - Nếu chưa cấu hình gì cả thì bỏ qua (tiện chạy local)
     """
-    # Chưa cấu hình mật khẩu → không bắt buộc đăng nhập (chỉ dùng lúc local)
-    if not AUTH_USERNAME or not AUTH_PASSWORD:
+    # Chưa cấu hình cơ chế đăng nhập nào → không bắt buộc (chỉ dùng lúc local)
+    if not auth_required():
         return None
 
     path = request.path
@@ -74,24 +100,105 @@ def require_auth():
 
 @app.route("/login", methods=["GET", "POST"])
 def login_page():
-    """Trang đăng nhập. GET: hiện form. POST: kiểm tra username/password."""
-    # Nếu chưa cấu hình mật khẩu thì chuyển thẳng vào app
-    if not AUTH_USERNAME or not AUTH_PASSWORD:
+    """Trang đăng nhập. Hiện nút Google và/hoặc form username/password."""
+    # Nếu chưa cấu hình cơ chế nào thì chuyển thẳng vào app
+    if not auth_required():
         return redirect(url_for("index"))
 
     error = None
     if request.method == "POST":
-        username = (request.form.get("username") or "").strip()
-        password = request.form.get("password") or ""
-        if secrets.compare_digest(username, AUTH_USERNAME) and secrets.compare_digest(password, AUTH_PASSWORD):
-            session.clear()
-            session["authenticated"] = True
-            session.permanent = True
-            next_url = request.args.get("next") or url_for("index")
-            return redirect(next_url)
-        error = "Sai tên đăng nhập hoặc mật khẩu."
+        # Nhánh username/password (chỉ hoạt động khi đã khai APP_USERNAME)
+        if not (AUTH_USERNAME and AUTH_PASSWORD):
+            error = "Hệ thống chỉ cho phép đăng nhập bằng Google."
+        else:
+            username = (request.form.get("username") or "").strip()
+            password = request.form.get("password") or ""
+            if secrets.compare_digest(username, AUTH_USERNAME) and secrets.compare_digest(password, AUTH_PASSWORD):
+                session.clear()
+                session["authenticated"] = True
+                session.permanent = True
+                next_url = request.args.get("next") or url_for("index")
+                return redirect(next_url)
+            error = "Sai tên đăng nhập hoặc mật khẩu."
 
-    return render_template("login.html", error=error)
+    return render_template(
+        "login.html",
+        error=error,
+        google_enabled=auth_module.google_oauth_enabled(),
+        password_enabled=bool(AUTH_USERNAME and AUTH_PASSWORD),
+    )
+
+
+@app.route("/login/google")
+def login_google():
+    """Chuyển hướng sang Google để người dùng chọn tài khoản."""
+    if not auth_module.google_oauth_enabled():
+        return redirect(url_for("login_page"))
+    redirect_uri = url_for("auth_google_callback", _external=True, _scheme="https") \
+        if request.headers.get("X-Forwarded-Proto") == "https" \
+        else url_for("auth_google_callback", _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
+
+@app.route("/auth/google/callback")
+def auth_google_callback():
+    """Google gọi về sau khi người dùng đồng ý. Tạo phiên đăng nhập tại đây."""
+    if not auth_module.google_oauth_enabled():
+        return redirect(url_for("login_page"))
+
+    try:
+        token = oauth.google.authorize_access_token()
+    except Exception as e:
+        return render_template("login.html", error=f"Đăng nhập Google thất bại: {e}",
+                               google_enabled=True,
+                               password_enabled=bool(AUTH_USERNAME and AUTH_PASSWORD))
+
+    info = token.get("userinfo") or {}
+    email = (info.get("email") or "").strip().lower()
+
+    if not email:
+        return render_template("login.html", error="Không lấy được email từ Google.",
+                               google_enabled=True,
+                               password_enabled=bool(AUTH_USERNAME and AUTH_PASSWORD))
+
+    if not info.get("email_verified", True):
+        return render_template("login.html", error="Email Google chưa được xác minh.",
+                               google_enabled=True,
+                               password_enabled=bool(AUTH_USERNAME and AUTH_PASSWORD))
+
+    if not auth_module.is_email_allowed(email):
+        return render_template("login.html",
+                               error=f"Tài khoản {email} không có quyền truy cập công cụ này.",
+                               google_enabled=True,
+                               password_enabled=bool(AUTH_USERNAME and AUTH_PASSWORD))
+
+    session.clear()
+    session["authenticated"] = True
+    session["user_email"] = email
+    session["user_name"] = info.get("name") or email.split("@")[0]
+    session["user_picture"] = info.get("picture") or ""
+    session.permanent = True
+
+    auth_module.record_login(DATA_DIR, email,
+                             name=session["user_name"],
+                             picture=session["user_picture"])
+
+    return redirect(url_for("index"))
+
+
+@app.route("/api/me", methods=["GET"])
+def api_me():
+    """Thông tin tài khoản đang đăng nhập — dùng để hiện tên/ảnh trên sidebar."""
+    return jsonify({
+        "status": "success",
+        "data": {
+            "authenticated": bool(session.get("authenticated")),
+            "email": session.get("user_email", ""),
+            "name": session.get("user_name", ""),
+            "picture": session.get("user_picture", ""),
+            "google_login": auth_module.google_oauth_enabled(),
+        }
+    })
 
 
 @app.route("/logout", methods=["GET", "POST"])
@@ -105,15 +212,23 @@ def logout_page():
 # Railway: gắn Volume rồi đặt biến DATA_DIR=/data → project/profile không mất khi redeploy.
 DATA_DIR = os.environ.get("DATA_DIR", ".")
 
-# Thư mục cố định chứa các file project dưới dạng file .json riêng biệt
-PROJECTS_ROOT = os.path.join(DATA_DIR, "projects")
-if not os.path.exists(PROJECTS_ROOT):
-    os.makedirs(PROJECTS_ROOT)
+# --- THƯ MỤC DỮ LIỆU ---
+# Khi bật Google OAuth, mỗi tài khoản có thư mục riêng:
+#     <DATA_DIR>/users/<hash-email>/projects
+#     <DATA_DIR>/users/<hash-email>/profiles
+# Hai người dùng khác nhau không bao giờ thấy dữ liệu của nhau.
+#
+# Khi chạy local không bật OAuth, mọi thứ dồn vào users/local — hành vi
+# giống hệt trước đây, không phải đăng nhập vẫn dùng được.
 
-# Thư mục cố định chứa các file profile kênh dưới dạng file .json mang tên kênh
-PROFILES_ROOT = os.path.join(DATA_DIR, "profiles")
-if not os.path.exists(PROFILES_ROOT):
-    os.makedirs(PROFILES_ROOT)
+def projects_root() -> str:
+    """Thư mục project của NGƯỜI DÙNG HIỆN TẠI."""
+    return auth_module.user_projects_root(DATA_DIR)
+
+
+def profiles_root() -> str:
+    """Thư mục profile của NGƯỜI DÙNG HIỆN TẠI."""
+    return auth_module.user_profiles_root(DATA_DIR)
 
 # Route chính: Render file index.html từ thư mục templates lên trình duyệt
 @app.route('/')
@@ -162,7 +277,7 @@ def upload_qc_page():
 def api_list_projects():
     """Liệt kê tất cả các project dựa trên các file .json có trong thư mục cố định projects/"""
     try:
-        files = [f[:-5] for f in os.listdir(PROJECTS_ROOT) if f.endswith('.json')]
+        files = [f[:-5] for f in os.listdir(projects_root()) if f.endswith('.json')]
         if not files:
             files = ["Default_Project"]
         return jsonify({"status": "success", "data": files})
@@ -175,7 +290,7 @@ def api_load_project():
     try:
         data = request.json or {}
         proj_name = data.get("project_name", "Default_Project").strip()
-        file_path = os.path.join(PROJECTS_ROOT, f"{proj_name}.json")
+        file_path = os.path.join(projects_root(), f"{proj_name}.json")
 
         if os.path.exists(file_path):
             with open(file_path, "r", encoding="utf-8") as f:
@@ -197,7 +312,7 @@ def api_save_project():
         if not proj_name:
             return jsonify({"status": "error", "message": "Tên project không được để trống!"}), 400
 
-        file_path = os.path.join(PROJECTS_ROOT, f"{proj_name}.json")
+        file_path = os.path.join(projects_root(), f"{proj_name}.json")
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(proj_content, f, ensure_ascii=False, indent=4)
 
@@ -211,7 +326,7 @@ def api_delete_project():
     try:
         data = request.json or {}
         proj_name = data.get("project_name", "").strip()
-        file_path = os.path.join(PROJECTS_ROOT, f"{proj_name}.json")
+        file_path = os.path.join(projects_root(), f"{proj_name}.json")
 
         if os.path.exists(file_path):
             os.remove(file_path)
@@ -227,10 +342,10 @@ def api_get_profiles():
     """Lấy danh sách tất cả các profile kênh từ thư mục cố định profiles/."""
     try:
         profiles = []
-        if os.path.exists(PROFILES_ROOT):
-            for f in os.listdir(PROFILES_ROOT):
+        if os.path.exists(profiles_root()):
+            for f in os.listdir(profiles_root()):
                 if f.endswith('.json'):
-                    file_path = os.path.join(PROFILES_ROOT, f)
+                    file_path = os.path.join(profiles_root(), f)
                     try:
                         with open(file_path, "r", encoding="utf-8") as file:
                             data = json.load(file)
@@ -256,7 +371,7 @@ def api_create_profile():
         profile_id = data.get("id") or uuid.uuid4().hex[:8]
         data["id"] = profile_id
 
-        file_path = os.path.join(PROFILES_ROOT, f"{safe_name}.json")
+        file_path = os.path.join(profiles_root(), f"{safe_name}.json")
 
         # ĐÃ SỬA: chống ghi đè nhầm 1 profile KHÁC có cùng tên kênh (safe_name trùng nhưng id khác)
         # -> tránh mất dữ liệu profile cũ một cách âm thầm, và tránh gây lệch ID như lỗi "không tìm thấy profile để xóa"
@@ -267,9 +382,9 @@ def api_create_profile():
                 existing_id = existing_data.get("id")
                 if existing_id and str(existing_id) != str(profile_id):
                     suffix = 1
-                    while os.path.exists(os.path.join(PROFILES_ROOT, f"{safe_name}_{suffix}.json")):
+                    while os.path.exists(os.path.join(profiles_root(), f"{safe_name}_{suffix}.json")):
                         suffix += 1
-                    file_path = os.path.join(PROFILES_ROOT, f"{safe_name}_{suffix}.json")
+                    file_path = os.path.join(profiles_root(), f"{safe_name}_{suffix}.json")
             except Exception:
                 pass
 
@@ -289,10 +404,10 @@ def api_delete_profile(profile_id):
         requested_id = str(profile_id).strip()
         seen_ids = []  # để log debug khi không tìm thấy, dễ chẩn đoán hơn lần sau
 
-        if os.path.exists(PROFILES_ROOT):
-            for f in os.listdir(PROFILES_ROOT):
+        if os.path.exists(profiles_root()):
+            for f in os.listdir(profiles_root()):
                 if f.endswith('.json'):
-                    file_path = os.path.join(PROFILES_ROOT, f)
+                    file_path = os.path.join(profiles_root(), f)
                     try:
                         with open(file_path, "r", encoding="utf-8") as file:
                             data = json.load(file)
@@ -526,7 +641,7 @@ def api_research_and_write():
         if not api_key:
             return jsonify({"status": "error", "message": "Chưa có Gemini API Key! Vui lòng nhập API Key ở sidebar."}), 400
 
-        project_dir = data.get("project_dir", os.path.join(PROJECTS_ROOT, project_name))
+        project_dir = data.get("project_dir", os.path.join(projects_root(), project_name))
         if not os.path.exists(project_dir):
             project_dir = "."
 
@@ -562,7 +677,7 @@ def api_direct_write():
         if not api_key:
             return jsonify({"status": "error", "message": "Chưa có Gemini API Key! Vui lòng nhập API Key ở sidebar."}), 400
 
-        project_dir = data.get("project_dir", os.path.join(PROJECTS_ROOT, project_name))
+        project_dir = data.get("project_dir", os.path.join(projects_root(), project_name))
         if not os.path.exists(project_dir):
             project_dir = "."
 
@@ -896,11 +1011,11 @@ def api_build_thumbnail_prompt_ai():
         # Nếu chưa có char/bg/scene style (do chưa sync Tool 0), thử resolve qua ID
         active_profile_id = (data.get("active_profile_id") or "").strip()
         if not char_style and not bg_style and not scene_style and not visual and active_profile_id:
-            if os.path.exists(PROFILES_ROOT):
-                for fname in os.listdir(PROFILES_ROOT):
+            if os.path.exists(profiles_root()):
+                for fname in os.listdir(profiles_root()):
                     if not fname.endswith(".json"):
                         continue
-                    fpath = os.path.join(PROFILES_ROOT, fname)
+                    fpath = os.path.join(profiles_root(), fname)
                     try:
                         with open(fpath, "r", encoding="utf-8") as f:
                             pj = json.load(f)

@@ -19,6 +19,10 @@
     const SYNCED_FLAG = "bk_tools_synced";
     const ACTIVE_ID = "bk_active_profile_id";
     const ACTIVE_NAME = "bk_active_profile_name";
+    // Danh sách project & project đang mở — dùng chung cho MỌI tool, nhờ vậy
+    // project chỉ cần tạo 1 lần ở bất kỳ tool nào là các tool khác thấy ngay.
+    const PROJECTS_LIST = "bk_projects_list";
+    const ACTIVE_PROJECT = "bk_last_active_project";
 
     const GREEN = "#10b981";
 
@@ -147,7 +151,51 @@
         btn.title = "Đã đồng bộ toàn hệ thống — Nhấn để đồng bộ lại";
     }
 
+    // ── ĐỒNG BỘ DANH SÁCH PROJECT ────────────────────────────────
+    // Mọi tool đọc chung 2 key localStorage nên chỉ cần tạo project một lần.
+    // Hàm này dựng lại <select> của tool hiện tại theo danh sách dùng chung.
+
+    function readProjects() {
+        try {
+            const list = JSON.parse(localStorage.getItem(PROJECTS_LIST) || "[]");
+            return Array.isArray(list) && list.length ? list : ["Default_Project"];
+        } catch (e) {
+            return ["Default_Project"];
+        }
+    }
+
+    function projectSelectEl() {
+        return firstEl(["#projectSelectDropdown", "#projectSelect", ".select-project"]);
+    }
+
+    function applyProjects() {
+        const dd = projectSelectEl();
+        if (!dd || dd.tagName !== "SELECT") return;
+
+        const projects = readProjects();
+        let active = localStorage.getItem(ACTIVE_PROJECT) || projects[0];
+        if (!projects.includes(active)) active = projects[0];
+
+        // Giữ nguyên option "tạo mới" mà tool đang dùng (mỗi tool đặt tên khác nhau)
+        const newOpt = Array.from(dd.options).find(function (o) {
+            return o.value === "__new__" || o.value === "" || /new/i.test(o.textContent);
+        });
+        const newValue = newOpt ? newOpt.value : "__new__";
+        const newLabel = newOpt ? newOpt.textContent : "+ New Project…";
+
+        dd.innerHTML =
+            '<option value="' + newValue + '">' + newLabel + "</option>" +
+            projects.map(function (p) {
+                const sel = p === active ? " selected" : "";
+                return '<option value="' + p + '"' + sel + ">" + p + "</option>";
+            }).join("");
+    }
+
     function applySyncedData() {
+        // Project list luôn áp dụng, không phụ thuộc cờ đã-đồng-bộ,
+        // vì đây là dữ liệu điều hướng chứ không phải nội dung sản xuất.
+        applyProjects();
+
         const data = shared();
         const hasData = Object.keys(data).length > 0;
         if (!hasData && localStorage.getItem(SYNCED_FLAG) !== "1") return;
@@ -193,9 +241,22 @@
             if (state.apiKey) localStorage.setItem(API_KEY_STORAGE, state.apiKey);
             localStorage.setItem(SHARED_KEY, JSON.stringify(state));
             localStorage.setItem(SYNCED_FLAG, "1");
+
+            // Đẩy luôn project đang mở ở tool này lên kho dùng chung, để các
+            // tool khác mở lên là thấy đúng project — không phải tạo lại.
+            const dd = projectSelectEl();
+            if (dd && dd.value && dd.value !== "__new__") {
+                const projects = readProjects();
+                if (!projects.includes(dd.value)) {
+                    projects.push(dd.value);
+                    localStorage.setItem(PROJECTS_LIST, JSON.stringify(projects));
+                }
+                localStorage.setItem(ACTIVE_PROJECT, dd.value);
+            }
+
             applySyncedData();
             markSyncButtonGreen(btn);
-            toast("Đã đồng bộ Active Profile & API sang toàn bộ tools!");
+            toast("Đã đồng bộ Project, Active Profile & API sang toàn bộ tools!");
             e.stopPropagation();
         });
     }
@@ -213,7 +274,8 @@
 
     // Tự cập nhật khi Tool 0 đồng bộ ở tab khác, hoặc khi tab được focus lại
     window.addEventListener("storage", function (e) {
-        if (e.key === SHARED_KEY || e.key === API_KEY_STORAGE || e.key === SYNCED_FLAG) applySyncedData();
+        if (e.key === SHARED_KEY || e.key === API_KEY_STORAGE || e.key === SYNCED_FLAG ||
+            e.key === PROJECTS_LIST || e.key === ACTIVE_PROJECT) applySyncedData();
     });
     window.addEventListener("focus", applySyncedData);
 })();
