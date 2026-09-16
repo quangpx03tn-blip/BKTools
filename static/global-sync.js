@@ -169,12 +169,20 @@
     }
 
     function applyProjects() {
-        const dd = projectSelectEl();
-        if (!dd || dd.tagName !== "SELECT") return;
-
         const projects = readProjects();
         let active = localStorage.getItem(ACTIVE_PROJECT) || projects[0];
         if (!projects.includes(active)) active = projects[0];
+
+        // Tool 1-7: chỉ hiển thị tên project dưới dạng chữ (không cho sửa).
+        // Việc tạo/chọn project được gom hết về Tool 0.
+        const label = document.getElementById("ctxProjectName");
+        if (label) {
+            label.textContent = active || "—";
+            label.style.color = active ? GREEN : "";
+        }
+
+        const dd = projectSelectEl();
+        if (!dd || dd.tagName !== "SELECT") return;
 
         // Giữ nguyên option "tạo mới" mà tool đang dùng (mỗi tool đặt tên khác nhau)
         const newOpt = Array.from(dd.options).find(function (o) {

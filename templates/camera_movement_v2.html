@@ -88,31 +88,28 @@
             <div class="text-accentOrange font-extrabold tracking-wider text-lg">BK TOOLS</div>
             <div class="text-[10px] text-gray-400 tracking-widest uppercase">PRODUCTION SUITE</div>
         </div>
-        <div class="p-4 border-b border-borderDark space-y-3">
+        <!-- Ngữ cảnh hiện tại (CHỈ ĐỌC) — tạo/chọn Project & Profile ở Tool 0 -->
+        <div class="p-4 border-b border-borderDark space-y-2.5">
             <div class="flex justify-between items-center">
-                <label class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Project</label>
+                <label class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Ngữ cảnh</label>
                 <button id="syncGlobalToolsBtn" class="border border-borderDark bg-cardBg hover:border-accentOrange text-[11px] px-2 py-1 rounded text-gray-300 transition flex items-center gap-1.5 cursor-pointer">
                     <i class="fa-solid fa-bars-progress text-accentOrange text-[10px]"></i> HH-Media tools
                 </button>
             </div>
-            <div class="relative">
-                <select id="projectSelectDropdown" onchange="handleProjectSelect(this)" class="w-full bg-inputBg border border-borderDark text-sm rounded px-3 py-2 appearance-none focus:outline-none focus:border-accentOrange text-gray-300 cursor-pointer">
-                    <option>Default_Project</option>
-                </select>
-                <i class="fa-solid fa-chevron-down absolute right-3 top-3 text-xs text-gray-400 pointer-events-none"></i>
+            <div class="bg-cardBg border border-borderDark rounded-lg px-3 py-2">
+                <div class="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Project</div>
+                <div id="ctxProjectName" class="text-sm text-gray-300 font-medium truncate">—</div>
             </div>
-            <div class="flex gap-2">
-                <button onclick="createNewProject()" class="flex-1 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium transition flex items-center justify-center gap-1"><i class="fa-solid fa-plus text-[10px]"></i> New</button>
-                <button onclick="manualSaveProject()" class="flex-1 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium transition flex items-center justify-center gap-1"><i class="fa-solid fa-floppy-disk text-[10px]"></i> Save</button>
-                <button onclick="exportProjectJSON()" class="px-3 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium transition" title="Xuất JSON">...</button>
+            <div class="bg-cardBg border border-borderDark rounded-lg px-3 py-2">
+                <div class="flex justify-between items-center mb-0.5">
+                    <span class="text-[10px] text-gray-500 uppercase tracking-wider">Active Profile</span>
+                    <span id="activeProfileId" class="text-[10px] text-gray-500 font-mono"></span>
+                </div>
+                <div id="activeProfileName" class="text-sm text-gray-400 italic truncate">Chưa chọn profile</div>
             </div>
-        </div>
-        <div class="px-4 py-3 border-b border-borderDark cursor-pointer hover:bg-cardBg/50 transition">
-            <div class="flex justify-between items-center text-xs mb-1">
-                <span class="text-gray-400 uppercase tracking-wider">Active Profile</span>
-                <span id="activeProfileId" class="text-gray-500 font-mono">1f55</span>
-            </div>
-            <div id="activeProfileName" class="text-sm text-emerald-400 font-semibold">미래산업 리포트</div>
+            <a href="/" class="block text-center text-[10px] text-gray-500 hover:text-accentOrange transition pt-0.5">
+                <i class="fa-solid fa-gear text-[9px]"></i> Quản lý ở Tool 0 — Topic Ideator
+            </a>
         </div>
         <nav class="py-2 space-y-1">
             <a href="/" class="flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 text-sm transition"><span class="w-6 text-xs text-gray-500">0</span> Topic Ideator</a>
@@ -613,39 +610,12 @@ function loadProjectData(projName) {
     }
 }
 
-/* --- Dropdown project --- */
+/* --- Ngữ cảnh project (chỉ đọc; tạo/chọn ở Tool 0) --- */
 function initProjectsList() {
     const projects = JSON.parse(localStorage.getItem('bk_projects_list') || '["Default_Project"]');
     if (!projects.includes(currentActiveProject)) currentActiveProject = projects[0];
-    const dd = document.getElementById('projectSelectDropdown');
-    if (!dd) return;
-    dd.innerHTML = '<option value="__new__">+ New Project…</option>' +
-        projects.map(p => `<option value="${p}"${p === currentActiveProject ? ' selected' : ''}>${p}</option>`).join('');
-}
-
-function handleProjectSelect(sel) {
-    if (sel.value === '__new__') { sel.value = currentActiveProject; createNewProject(); return; }
-    if (sel.value === currentActiveProject) return;
-    saveCurrentProjectData(true);
-    currentActiveProject = sel.value;
-    localStorage.setItem('bk_last_active_project', currentActiveProject);
-    loadProjectData(currentActiveProject);
-    showToast(`Đã mở project: ${currentActiveProject}`);
-}
-
-function createNewProject() {
-    const name = (prompt('Tên project mới:') || '').trim();
-    if (!name) return;
-    const projects = JSON.parse(localStorage.getItem('bk_projects_list') || '["Default_Project"]');
-    if (projects.includes(name)) { showToast(`Project "${name}" đã tồn tại!`, true); return; }
-    saveCurrentProjectData(true);
-    projects.push(name);
-    localStorage.setItem('bk_projects_list', JSON.stringify(projects));
-    currentActiveProject = name;
-    localStorage.setItem('bk_last_active_project', name);
-    initProjectsList();
-    saveCurrentProjectData(true);
-    showToast(`Đã tạo project: ${name}`);
+    const label = document.getElementById('ctxProjectName');
+    if (label) label.textContent = currentActiveProject || '—';
 }
 
 function manualSaveProject() { saveCurrentProjectData(false); }

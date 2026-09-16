@@ -40,28 +40,28 @@
             <div class="text-accentOrange font-extrabold tracking-wider text-lg">BK TOOLS</div>
             <div class="text-[10px] text-gray-400 tracking-widest uppercase">PRODUCTION SUITE</div>
         </div>
-        <div class="p-4 border-b border-borderDark space-y-3">
+        <!-- Ngữ cảnh hiện tại (CHỈ ĐỌC) — tạo/chọn Project & Profile ở Tool 0 -->
+        <div class="p-4 border-b border-borderDark space-y-2.5">
             <div class="flex justify-between items-center">
-                <label class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Project</label>
-                <button id="syncBtn" class="border border-borderDark bg-cardBg hover:border-accentOrange text-[11px] px-2 py-1 rounded text-gray-300 transition flex items-center gap-1.5">
+                <label class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Ngữ cảnh</label>
+                <button id="syncGlobalToolsBtn" class="border border-borderDark bg-cardBg hover:border-accentOrange text-[11px] px-2 py-1 rounded text-gray-300 transition flex items-center gap-1.5">
                     <i class="fa-solid fa-bars-progress text-accentOrange text-[10px]"></i> HH-Media tools
                 </button>
             </div>
-            <select id="projectSelect" class="w-full bg-inputBg border border-borderDark text-sm rounded px-3 py-2 appearance-none focus:outline-none focus:border-accentOrange text-gray-300">
-                <option>Default_Project</option>
-            </select>
-            <div class="flex gap-2">
-                <button onclick="newProject()" class="flex-1 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium"><i class="fa-solid fa-plus text-[10px]"></i> New</button>
-                <button onclick="saveProject()" class="flex-1 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium"><i class="fa-solid fa-floppy-disk text-[10px]"></i> Save</button>
-                <button class="px-3 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium">...</button>
+            <div class="bg-cardBg border border-borderDark rounded-lg px-3 py-2">
+                <div class="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Project</div>
+                <div id="ctxProjectName" class="text-sm text-gray-300 font-medium truncate">—</div>
             </div>
-        </div>
-        <div class="px-4 py-3 border-b border-borderDark">
-            <div class="flex justify-between items-center text-xs mb-1">
-                <span class="text-gray-400 uppercase tracking-wider">Active Profile</span>
-                <span id="profileId" class="text-gray-500 font-mono">1f55</span>
+            <div class="bg-cardBg border border-borderDark rounded-lg px-3 py-2">
+                <div class="flex justify-between items-center mb-0.5">
+                    <span class="text-[10px] text-gray-500 uppercase tracking-wider">Active Profile</span>
+                    <span id="activeProfileId" class="text-[10px] text-gray-500 font-mono"></span>
+                </div>
+                <div id="activeProfileName" class="text-sm text-gray-400 italic truncate">Chưa chọn profile</div>
             </div>
-            <div id="profileName" class="text-sm text-emerald-400 font-semibold">미래산업 리포트</div>
+            <a href="/" class="block text-center text-[10px] text-gray-500 hover:text-accentOrange transition pt-0.5">
+                <i class="fa-solid fa-gear text-[9px]"></i> Quản lý ở Tool 0 — Topic Ideator
+            </a>
         </div>
         <nav class="py-2 space-y-1">
             <a href="/" class="flex items-center px-4 py-2.5 hover:bg-cardBg/50 text-gray-400 text-sm"><span class="w-6 text-xs text-gray-500">0</span> Topic Ideator</a>
@@ -653,23 +653,12 @@ function loadThumbData(projName) {
     }
 }
 
+// Project chỉ được tạo/chọn ở Tool 0. Ở đây chỉ hiển thị tên đang dùng.
 function initProjects() {
     const projects = JSON.parse(localStorage.getItem('bk_projects_list') || '["Default_Project"]');
     if (!projects.includes(currentProject)) currentProject = projects[0];
-    const dd = document.getElementById('projectSelect');
-    if (!dd) return;
-    dd.innerHTML = '<option value="__new__">+ New Project…</option>' +
-        projects.map(p => `<option value="${p}"${p === currentProject ? ' selected' : ''}>${p}</option>`).join('');
-    dd.onchange = function () {
-        if (this.value === '__new__') { this.value = currentProject; newProject(); return; }
-        if (this.value === currentProject) return;
-        saveThumbData(true);
-        currentProject = this.value;
-        localStorage.setItem('bk_last_active_project', currentProject);
-        clearThumbWorkspace();
-        loadThumbData(currentProject);
-        toast(`Đã mở project: ${currentProject}`);
-    };
+    const label = document.getElementById('ctxProjectName');
+    if (label) label.textContent = currentProject || '—';
 }
 
 function clearThumbWorkspace() {
@@ -684,22 +673,6 @@ function clearThumbWorkspace() {
     document.getElementById('promptMeta').innerHTML = '';
     document.getElementById('compositionNote')?.classList.add('hidden');
     clearRefImage();
-}
-
-function newProject() {
-    const name = (prompt('Tên project mới:') || '').trim();
-    if (!name) return;
-    const projects = JSON.parse(localStorage.getItem('bk_projects_list') || '["Default_Project"]');
-    if (projects.includes(name)) { toast(`Project "${name}" đã tồn tại!`, true); return; }
-    saveThumbData(true);
-    projects.push(name);
-    localStorage.setItem('bk_projects_list', JSON.stringify(projects));
-    currentProject = name;
-    localStorage.setItem('bk_last_active_project', name);
-    initProjects();
-    clearThumbWorkspace();
-    saveThumbData(true);
-    toast(`Đã tạo project: ${name}`);
 }
 
 function saveProject() { saveThumbData(false); }

@@ -385,27 +385,30 @@
                 <div class="logo-sub">Production Suite</div>
             </div>
 
+            <!-- Ngữ cảnh hiện tại (CHỈ ĐỌC) — tạo/chọn Project & Profile ở Tool 0 -->
             <div class="project-section">
-                <div class="project-label">Project</div>
-                <div class="project-box">
+                <div class="project-label">Ngữ cảnh</div>
+                <div class="project-box" id="syncGlobalToolsBtn" style="cursor:pointer;" title="Đồng bộ toàn hệ thống">
                     <span class="color-dot"></span>
                     <span>HH-Media tools</span>
                 </div>
-                <select class="select-project">
-                    <option>Default_Project</option>
-                </select>
-                <div class="btn-row">
-                    <button class="btn btn-primary">+ New</button>
-                    <button class="btn" onclick="autoSaveData()">💾 Save</button>
-                    <button class="btn">... More</button>
-                </div>
-            </div>
 
-            <div class="profile-status">
-                ACTIVE PROFILE <span>061</span>
-            </div>
-            <div style="padding: 4px 20px; font-size: 11px; color: var(--text-muted); font-style: italic;">
-                Chưa chọn profile
+                <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; margin-top: 8px;">
+                    <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px;">Project</div>
+                    <div id="ctxProjectName" style="font-size: 13px; color: var(--text-main); font-weight: 500;">—</div>
+                </div>
+
+                <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; margin-top: 8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2px;">
+                        <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em;">Active Profile</span>
+                        <span id="activeProfileId" style="font-size: 10px; color: var(--text-muted); font-family: monospace;"></span>
+                    </div>
+                    <div id="activeProfileName" style="font-size: 13px; color: var(--text-muted); font-style: italic;">Chưa chọn profile</div>
+                </div>
+
+                <a href="/" style="display:block; text-align:center; font-size:10px; color:var(--text-muted); text-decoration:none; padding-top:8px;">
+                    ⚙ Quản lý ở Tool 0 — Topic Ideator
+                </a>
             </div>
 
             <div class="nav-menu">

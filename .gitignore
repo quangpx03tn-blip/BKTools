@@ -25,6 +25,8 @@ Thumbs.db
 file lưu/
 
 # Runtime data (giữ trên máy local; trên Railway dùng Volume riêng)
+# users/ chứa dữ liệu riêng của từng tài khoản Google — không đẩy lên GitHub
+users/
 # Nếu muốn đồng bộ sẵn profile mẫu lên GitHub, bỏ comment dòng dưới
 # profiles/
 # projects/

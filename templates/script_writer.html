@@ -46,57 +46,46 @@
                 <div class="text-[10px] text-gray-400 tracking-widest uppercase">PRODUCTION SUITE</div>
             </div>
 
-            <!-- Project Selector & Nút HH-Media Tools đồng bộ -->
-            <div class="p-4 border-b border-borderDark space-y-3">
+            <!-- Ngữ cảnh hiện tại (CHỈ ĐỌC) — tạo/chọn Project & Profile ở Tool 0 -->
+            <div class="p-4 border-b border-borderDark space-y-2.5">
                 <div class="flex justify-between items-center">
-                    <label class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Project</label>
+                    <label class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Ngữ cảnh</label>
                     <button id="syncGlobalToolsBtn" class="border border-borderDark bg-cardBg hover:border-accentOrange text-[11px] px-2 py-1 rounded text-gray-300 transition flex items-center gap-1.5 cursor-pointer" title="Đồng bộ toàn hệ thống">
                         <i class="fa-solid fa-bars-progress text-accentOrange text-[10px]"></i> HH-Media tools
                     </button>
                 </div>
 
-                <div class="relative">
-                    <select id="projectSelectDropdown" onchange="handleProjectSelect(this)" class="w-full bg-inputBg border border-borderDark text-sm rounded px-3 py-2 appearance-none focus:outline-none focus:border-accentOrange text-gray-300 cursor-pointer">
+                <div class="bg-cardBg border border-borderDark rounded-lg px-3 py-2">
+                    <div class="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Project</div>
+                    <div id="ctxProjectName" class="text-sm text-gray-300 font-medium truncate">—</div>
+                </div>
+
+                <div class="bg-cardBg border border-borderDark rounded-lg px-3 py-2">
+                    <div class="flex justify-between items-center mb-0.5">
+                        <span class="text-[10px] text-gray-500 uppercase tracking-wider">Active Profile</span>
+                        <span id="activeProfileId" class="text-[10px] text-gray-500 font-mono"></span>
+                    </div>
+                    <div id="activeProfileName" class="text-sm text-gray-400 italic truncate">Chưa chọn profile</div>
+                </div>
+
+                <a href="/" class="block text-center text-[10px] text-gray-500 hover:text-accentOrange transition pt-0.5">
+                    <i class="fa-solid fa-gear text-[9px]"></i> Quản lý ở Tool 0 — Topic Ideator
+                </a>
+
+                <!-- Các phần tử điều khiển project được GIỮ NHƯNG ẨN.
+                     Toàn bộ logic lưu/đọc project của tool này tham chiếu tới
+                     chúng ở hơn 20 chỗ; ẩn thay vì xóa để không vỡ luồng lưu,
+                     trong khi người dùng chỉ còn quản lý project ở Tool 0. -->
+                <div class="hidden">
+                    <select id="projectSelectDropdown" onchange="handleProjectSelect(this)">
                         <option value="">New...</option>
                     </select>
-                    <i class="fa-solid fa-chevron-down absolute right-3 top-3 text-xs text-gray-400 pointer-events-none"></i>
+                    <button id="openNewProjectBtn"></button>
+                    <button id="saveProjectBtn"></button>
+                    <button id="moreMenuBtn"></button>
+                    <div id="moreDropdownMenu" class="hidden"></div>
+                    <div id="openProfileModalBtn"></div>
                 </div>
-
-                <div class="flex gap-2 relative">
-                    <button id="openNewProjectBtn" class="flex-1 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium transition flex items-center justify-center gap-1 cursor-pointer">
-                        <i class="fa-solid fa-plus text-[10px]"></i> New
-                    </button>
-                    <button id="saveProjectBtn" class="flex-1 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium transition flex items-center justify-center gap-1 cursor-pointer">
-                        <i class="fa-solid fa-floppy-disk text-[10px]"></i> Save
-                    </button>
-
-                    <div class="relative">
-                        <button id="moreMenuBtn" class="px-3 bg-cardBg hover:bg-borderDark border border-borderDark text-xs py-1.5 rounded font-medium transition cursor-pointer">
-                            ... More
-                        </button>
-                        <div id="moreDropdownMenu" class="hidden absolute right-0 top-8 w-40 bg-cardBg border border-borderDark rounded-lg shadow-xl z-50 py-1 text-xs">
-                            <button onclick="openRenameModal()" class="w-full text-left px-3 py-2 hover:bg-borderDark text-gray-300 flex items-center gap-2 cursor-pointer">
-                                <i class="fa-solid fa-pen text-[10px] text-accentOrange"></i> Đổi tên Project
-                            </button>
-                            <button onclick="exportActiveProject()" class="w-full text-left px-3 py-2 hover:bg-borderDark text-gray-300 flex items-center gap-2 cursor-pointer">
-                                <i class="fa-solid fa-file-arrow-down text-[10px] text-cyan-400"></i> Export JSON
-                            </button>
-                            <div class="border-t border-borderDark my-1"></div>
-                            <button onclick="deleteActiveProject()" class="w-full text-left px-3 py-2 hover:bg-red-950/30 text-red-400 flex items-center gap-2 cursor-pointer">
-                                <i class="fa-solid fa-trash-can text-[10px]"></i> Xóa Project
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Active Profile Clickable -->
-            <div id="openProfileModalBtn" class="px-4 py-3 border-b border-borderDark cursor-pointer hover:bg-cardBg/50 transition">
-                <div class="flex justify-between items-center text-xs mb-1">
-                    <span class="text-gray-400 uppercase tracking-wider">Active Profile</span>
-                    <span id="activeProfileId" class="text-gray-500 font-mono">061</span>
-                </div>
-                <div id="activeProfileName" class="text-sm text-gray-400 italic">Chưa chọn profile</div>
             </div>
 
             <!-- Menu Navigation -->
@@ -717,6 +706,10 @@
                 localStorage.setItem('bk_last_active_project', projects[0]);
                 loadProjectDataToCurrentTab(projects[0]);
             }
+
+            // Hiển thị tên project đang dùng ở khối ngữ cảnh (chỉ đọc)
+            const ctxLabel = document.getElementById('ctxProjectName');
+            if (ctxLabel) ctxLabel.innerText = currentActiveProject || '—';
 
             // API Key
             const savedKey = localStorage.getItem('bk_gemini_api_key');
