@@ -109,11 +109,13 @@ class GetPromptImageHandler:
         "visually striking scene",
     )
 
-    def __init__(self, api_key=None, default_model="gemini-2.5-flash"):
+    def __init__(self, api_key=None, default_model=None):
         self.api_key = (api_key or os.getenv("GEMINI_API_KEY") or "").strip()
         if not self.api_key:
             raise ValueError("Chưa cấu hình API Key!")
-        self.default_model = default_model
+        # Theo model đang cấu hình trong ai_client, để đổi một chỗ là toàn
+        # hệ thống đổi theo (key chỉ bán Claude thì không gọi nhầm Gemini).
+        self.default_model = default_model or ai_client.SHOPAIKEY_MODEL
 
     # ------------------------------------------------------------------
     # Tiện ích

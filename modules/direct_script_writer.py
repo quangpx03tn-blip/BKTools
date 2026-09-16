@@ -8,7 +8,10 @@ from . import profile_manager
 
 # Tốc độ đọc voice-over trung bình (~155 từ/phút), khớp với công thức hiển thị trên giao diện
 WORDS_PER_MINUTE = 155
-DEFAULT_MODEL = "gemini-2.5-flash"
+# Lấy theo model đang cấu hình trong ai_client (biến SHOPAIKEY_MODEL),
+# để đổi model một chỗ là toàn hệ thống đổi theo — tránh tình trạng
+# key chỉ bán Claude nhưng handler vẫn gọi gemini-2.5-flash.
+DEFAULT_MODEL = ai_client.SHOPAIKEY_MODEL
 SECTION_MAX_OUTPUT_TOKENS = 8192
 
 
