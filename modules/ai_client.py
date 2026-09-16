@@ -1,5 +1,4 @@
 """
-import os
 modules/ai_client.py
 
 Module dùng chung để gọi mô hình AI sinh nội dung (text generation),
@@ -18,12 +17,21 @@ import os
 import requests
 from google import genai
 
-# Model dùng khi gọi qua ShopAIKey (endpoint OpenAI-compatible)
-SHOPAIKEY_MODEL = "gemini-2.5-flash"
+# Model dùng khi gọi qua ShopAIKey (endpoint OpenAI-compatible).
+#
+# ShopAIKey bán NHIỀU dòng model trên cùng một endpoint — chỉ cần đổi tên
+# model là chuyển nhà cung cấp, không phải đổi key hay endpoint. Ví dụ:
+#     gemini-2.5-flash           (mặc định, rẻ và nhanh)
+#     claude-sonnet-4-5          (Claude, chất lượng viết tốt hơn)
+#     claude-haiku-4-5-20251001  (Claude bản nhẹ, rẻ hơn)
+#     gpt-5-medium, deepseek-v3.2, grok-4.5, ...
+#
+# Đặt biến môi trường SHOPAIKEY_MODEL để đổi mặc định cho TOÀN hệ thống.
+SHOPAIKEY_MODEL = os.environ.get("SHOPAIKEY_MODEL", "gemini-2.5-flash").strip()
 
 # Model dùng khi gọi trực tiếp Gemini API (SDK google-genai)
 # Lưu ý: dùng tên model có thật, đang được Google hỗ trợ tại thời điểm chạy.
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash").strip()
 
 # --- CLAUDE (ANTHROPIC) ---
 # Model mặc định khi dùng key Claude. Đổi được qua biến môi trường
@@ -51,82 +59,6 @@ def is_claude_key(api_key: str) -> bool:
     CLAUDE_PROXY_URL nếu người dùng khai báo.
     """
     return (api_key or "").strip().startswith("sk-ant-")
-
-def _call_anthropic(api_key: str, prompt: str, system_prompt: str = None,
-                    model: str = None, json_mode: bool = False,
-                    temperature: float = None, max_output_tokens: int = None,
-                    timeout: int = 60) -> str:
-    """
-    Gọi Claude qua Messages API chính chủ của Anthropic.
-
-    Khác OpenAI/Gemini ở ba điểm cần lưu ý:
-      - Xác thực bằng header x-api-key, không phải Bearer token.
-      - system prompt là tham số riêng, KHÔNG nằm trong mảng messages.
-      - max_tokens là BẮT BUỘC, thiếu là API trả lỗi 400.
-
-    Anthropic không có chế độ JSON thuần như OpenAI. Để lấy JSON ổn định,
-    ta thêm chỉ thị vào system prompt và mồi sẵn dấu "{" cho câu trả lời,
-    rồi ghép lại ở đầu ra.
-    """
-    model = (model or CLAUDE_MODEL).strip()
-
-    headers = {
-        "Content-Type": "application/json",
-        "x-api-key": api_key,
-        "anthropic-version": ANTHROPIC_VERSION,
-    }
-
-    system_text = (system_prompt or "").strip()
-    if json_mode:
-        json_rule = (
-            "You must reply with one valid JSON object only. "
-            "No markdown fences, no commentary before or after."
-        )
-        system_text = f"{system_text}\n\n{json_rule}".strip() if system_text else json_rule
-
-    messages = [{"role": "user", "content": prompt}]
-    if json_mode:
-        # Mồi câu trả lời bằng "{" để model không mở đầu bằng lời dẫn
-        messages.append({"role": "assistant", "content": "{"})
-
-    payload = {
-        "model": model,
-        # Anthropic bắt buộc có max_tokens; đặt mặc định đủ rộng cho các tác vụ
-        "max_tokens": int(max_output_tokens) if max_output_tokens else 4096,
-        "messages": messages,
-    }
-    if system_text:
-        payload["system"] = system_text
-    if temperature is not None:
-        payload["temperature"] = temperature
-
-    try:
-        resp = requests.post(ANTHROPIC_API_URL, json=payload,
-                             headers=headers, timeout=timeout)
-    except requests.RequestException as e:
-        raise RuntimeError(f"Lỗi kết nối tới Claude (Anthropic): {e}")
-
-    if resp.status_code != 200:
-        raise RuntimeError(f"Claude API Error ({resp.status_code}): {resp.text}")
-
-    try:
-        data = resp.json()
-        # Nội dung nằm trong mảng content, lấy các khối kiểu "text"
-        parts = [b.get("text", "") for b in (data.get("content") or [])
-                 if b.get("type") == "text"]
-        text = "".join(parts).strip()
-    except (KeyError, ValueError) as e:
-        raise RuntimeError(f"Không đọc được phản hồi từ Claude: {e} | Raw: {resp.text}")
-
-    if not text:
-        raise RuntimeError("Claude trả về nội dung rỗng.")
-
-    # Ghép lại dấu "{" đã mồi ở trên để thành JSON hoàn chỉnh
-    if json_mode and not text.lstrip().startswith("{"):
-        text = "{" + text
-
-    return text
-
 
 # --- NGÔN NGỮ ĐẦU RA ---
 # Giao diện gửi nhãn tiếng Việt ("Tiếng Hàn"). Nhét thẳng nhãn này vào một
@@ -170,7 +102,6 @@ def resolve_lang(vo_lang: str, default: str = "Vietnamese") -> str:
 def generate_content(api_key: str, prompt: str, system_prompt: str = None,
                       shop_model: str = SHOPAIKEY_MODEL,
                       gemini_model: str = GEMINI_MODEL,
-                      claude_model: str = CLAUDE_MODEL,
                       json_mode: bool = False,
                       temperature: float = None,
                       max_output_tokens: int = None,
@@ -250,9 +181,14 @@ def generate_content(api_key: str, prompt: str, system_prompt: str = None,
 
         try:
             resp_json = resp.json()
-            return resp_json["choices"][0]["message"]["content"].strip()
+            text = resp_json["choices"][0]["message"]["content"].strip()
         except (KeyError, IndexError, ValueError) as e:
             raise RuntimeError(f"Không đọc được phản hồi từ {provider}: {e} | Raw: {resp.text}")
+
+        # Model Claude chạy qua endpoint này vẫn bọc kết quả trong ```json
+        # dù đã bật response_format. Dọn sẵn ở đây để mọi handler gọi
+        # json.loads() trực tiếp không bị vỡ.
+        return clean_json_text(text) if json_mode else text
 
     # --- Nhánh 2: Gemini API gốc ---
     else:
@@ -322,75 +258,11 @@ def generate_content_with_image(api_key: str, prompt: str, image_base64: str,
 
     api_key = api_key.strip()
 
-    # --- Nhánh 0: Claude chính chủ (Anthropic) hỗ trợ vision ---
-    # Anthropic nhận ảnh qua content block kiểu "image" với source base64,
-    # khác hẳn cách OpenAI dùng "image_url".
-    if is_claude_key(api_key):
-        raw_b64 = image_base64.strip()
-        media_type = "image/jpeg"
-        if raw_b64.startswith("data:"):
-            header, _, payload_b64 = raw_b64.partition(",")
-            raw_b64 = payload_b64
-            if ";" in header:
-                media_type = header[5:].split(";")[0] or "image/jpeg"
-
-        system_text = (system_prompt or "").strip()
-        if json_mode:
-            json_rule = ("You must reply with one valid JSON object only. "
-                         "No markdown fences, no commentary.")
-            system_text = f"{system_text}\n\n{json_rule}".strip() if system_text else json_rule
-
-        content = [
-            {"type": "image",
-             "source": {"type": "base64", "media_type": media_type, "data": raw_b64}},
-            {"type": "text", "text": prompt},
-        ]
-        messages = [{"role": "user", "content": content}]
-        if json_mode:
-            messages.append({"role": "assistant", "content": "{"})
-
-        payload = {
-            "model": CLAUDE_MODEL,
-            "max_tokens": int(max_output_tokens) if max_output_tokens else 4096,
-            "messages": messages,
-        }
-        if system_text:
-            payload["system"] = system_text
-        if temperature is not None:
-            payload["temperature"] = temperature
-
-        headers = {
-            "Content-Type": "application/json",
-            "x-api-key": api_key,
-            "anthropic-version": ANTHROPIC_VERSION,
-        }
-
-        try:
-            resp = requests.post(ANTHROPIC_API_URL, json=payload,
-                                 headers=headers, timeout=180)
-        except requests.RequestException as e:
-            raise RuntimeError(f"Lỗi kết nối tới Claude Vision: {e}")
-
-        if resp.status_code != 200:
-            raise RuntimeError(f"Claude Vision Error ({resp.status_code}): {resp.text}")
-
-        try:
-            data = resp.json()
-            parts = [b.get("text", "") for b in (data.get("content") or [])
-                     if b.get("type") == "text"]
-            text = "".join(parts).strip()
-        except (KeyError, ValueError) as e:
-            raise RuntimeError(f"Không đọc được phản hồi vision từ Claude: {e} | Raw: {resp.text}")
-
-        if json_mode and text and not text.lstrip().startswith("{"):
-            text = "{" + text
-        return text
-
-    # --- Nhánh 1: ShopAIKey / proxy (OpenAI-compatible endpoint hỗ trợ vision) ---
+    # --- Nhánh 1: ShopAIKey (OpenAI-compatible endpoint hỗ trợ vision) ---
     # Endpoint chuẩn OpenAI nhận ảnh qua content part kiểu "image_url",
     # với data URL base64 nhúng trực tiếp. Model gemini-* phía sau đọc được ảnh.
     if api_key.startswith("sk-"):
-        url = CLAUDE_PROXY_URL or "https://direct.shopaikey.com/v1/chat/completions"
+        url = "https://direct.shopaikey.com/v1/chat/completions"
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {api_key}",
