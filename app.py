@@ -36,11 +36,41 @@ from authlib.integrations.flask_client import OAuth
 
 AUTH_USERNAME = os.environ.get("APP_USERNAME", "")
 AUTH_PASSWORD = os.environ.get("APP_PASSWORD", "")
-# SECRET_KEY dùng để ký session cookie. Nếu không đặt, sinh ngẫu nhiên (login
-# sẽ mất hiệu lực mỗi lần restart server, nhưng vẫn an toàn).
-app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+# SECRET_KEY dùng để ký session cookie.
+#
+# QUAN TRỌNG khi chạy nhiều worker (gunicorn --workers 2):
+# nếu mỗi worker tự sinh key ngẫu nhiên thì cookie do worker này ký,
+# worker kia không đọc được -> người dùng bị đá ra mỗi lần chuyển trang.
+# Vì vậy trên production BẮT BUỘC phải khai SECRET_KEY trong biến môi trường.
+_secret = os.environ.get("SECRET_KEY", "").strip()
+if not _secret:
+    # Chạy local thì tự sinh cho tiện, nhưng phải cảnh báo rõ ràng
+    _secret = secrets.token_hex(32)
+    print(
+        "[!] CANH BAO: Chua khai bien SECRET_KEY.\n"
+        "    Moi worker se sinh key rieng -> dang nhap bi mat khi chuyen trang.\n"
+        "    Tren Railway: Variables -> them SECRET_KEY = <chuoi ngau nhien dai>."
+    )
+app.secret_key = _secret
+
 # Thời gian phiên đăng nhập duy trì (giây) - mặc định 7 ngày
 app.permanent_session_lifetime = 60 * 60 * 24 * 7
+
+# Cookie phiên: chống gửi kèm sang site khác, và ép HTTPS khi chạy production.
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=bool(os.environ.get("RAILWAY_ENVIRONMENT")
+                               or os.environ.get("SESSION_COOKIE_SECURE")),
+)
+
+# Railway đứng sau reverse proxy: không có ProxyFix thì Flask tưởng request là
+# http, url_for(_external=True) sinh redirect_uri sai -> Google OAuth báo lỗi.
+try:
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+except Exception:
+    pass
 
 # Những route KHÔNG cần đăng nhập (trang login/logout/tài nguyên tĩnh)
 PUBLIC_PATHS = {"/login", "/logout", "/favicon.ico",
@@ -134,9 +164,9 @@ def login_google():
     """Chuyển hướng sang Google để người dùng chọn tài khoản."""
     if not auth_module.google_oauth_enabled():
         return redirect(url_for("login_page"))
-    redirect_uri = url_for("auth_google_callback", _external=True, _scheme="https") \
-        if request.headers.get("X-Forwarded-Proto") == "https" \
-        else url_for("auth_google_callback", _external=True)
+    # ProxyFix đã dựng lại đúng scheme/host từ header của Railway,
+    # nên url_for(_external=True) tự sinh https://... chuẩn.
+    redirect_uri = url_for("auth_google_callback", _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
 
