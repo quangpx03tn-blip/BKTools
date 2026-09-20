@@ -365,18 +365,30 @@ Trả về JSON thuần, không kèm markdown. Đúng {len(batch)} phần tử,
                 "G-Labs Image Prompts — mỗi dòng cần bắt đầu bằng [001], [002]..."
             )
 
-        # Gọi AI theo lô
-        results = {}
-        for i in range(0, len(enriched), BATCH_SIZE):
-            batch = enriched[i:i + BATCH_SIZE]
+        # Gọi AI theo lô — các lô độc lập nhau nên chạy SONG SONG.
+        # Mỗi lô với Claude mất 30-60s; chạy tuần tự thì video 24 scene
+        # (4 lô) mất ~3 phút, chạy đồng thời chỉ còn bằng một lô.
+        batches = [enriched[i:i + BATCH_SIZE]
+                   for i in range(0, len(enriched), BATCH_SIZE)]
+
+        def run_batch(batch):
             try:
-                results.update(self._analyze_batch(batch, motion_style, vo_lang))
+                return self._analyze_batch(batch, motion_style, vo_lang)
             except Exception as e:
                 # Sai key / hết credit thì mọi lô sau cũng hỏng -> báo ngay.
                 if ai_client.is_fatal_error(e):
                     raise RuntimeError(f"Không gọi được AI: {e}")
                 # Lô lỗi lẻ thì để fallback lo, không làm sập cả tiến trình
-                continue
+                return {}
+
+        results = {}
+        if len(batches) == 1:
+            results.update(run_batch(batches[0]))
+        else:
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=min(4, len(batches))) as ex:
+                for part in ex.map(run_batch, batches):
+                    results.update(part)
 
         # Ghép kết quả cuối
         lines = []

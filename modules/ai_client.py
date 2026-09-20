@@ -41,6 +41,40 @@ SHOPAIKEY_MODEL = os.environ.get("SHOPAIKEY_MODEL", "claude-sonnet-4-5").strip()
 # thiết kế góc máy theo mạch phim, phân tích ảnh tham chiếu.
 MODEL_DEEP = os.environ.get("SHOPAIKEY_MODEL_DEEP", "claude-sonnet-4-5").strip()
 
+# Model NHANH cho tác vụ ngắn, có khuôn mẫu: mô tả scene 30-60 từ, tách
+# scene, gán asset, viết metadata. Đo thực tế gemini-2.5-flash trả lời
+# ~15s cho khối lượng mà claude-sonnet mất ~64s.
+# Key nhóm claude_discount không có Gemini -> cơ chế tự fallback bên dưới
+# sẽ chuyển sang MODEL_DEEP khi gặp lỗi model_not_found.
+MODEL_FAST = os.environ.get("SHOPAIKEY_MODEL_FAST", "gemini-2.5-flash").strip()
+
+# Bộ nhớ đệm: model nào đã biết là chạy được / không chạy được với từng key.
+# Tránh lặp lại lời gọi thất bại mỗi lần request — mỗi lần thử sai tốn
+# thêm vài giây chờ mạng.
+_MODEL_OK_CACHE = {}
+
+
+def _cache_key(api_key: str, model: str) -> str:
+    return f"{api_key[:10]}|{model}"
+
+
+def model_works(api_key: str, model: str):
+    """None = chưa biết, True/False = đã thử."""
+    return _MODEL_OK_CACHE.get(_cache_key(api_key, model))
+
+
+def _remember(api_key: str, model: str, ok: bool):
+    _MODEL_OK_CACHE[_cache_key(api_key, model)] = ok
+
+
+def fallback_for(api_key: str, model: str) -> str:
+    """Model dự phòng khi model chính bị nhà cung cấp từ chối."""
+    if model == MODEL_FAST:
+        return MODEL_DEEP
+    if model == MODEL_DEEP:
+        return MODEL_FAST
+    return MODEL_DEEP if model != MODEL_DEEP else MODEL_FAST
+
 # Model dùng khi gọi trực tiếp Gemini API (SDK google-genai)
 # Lưu ý: dùng tên model có thật, đang được Google hỗ trợ tại thời điểm chạy.
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash").strip()
@@ -190,35 +224,57 @@ def generate_content(api_key: str, prompt: str, system_prompt: str = None,
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
 
-        payload = {
-            "model": shop_model,
-            "messages": messages
-        }
-        if temperature is not None:
-            payload["temperature"] = temperature
-        if json_mode:
-            payload["response_format"] = {"type": "json_object"}
-        if max_output_tokens:
-            payload["max_tokens"] = int(max_output_tokens)
+        # Thử model được yêu cầu trước; nếu nhà cung cấp báo không có model
+        # đó (key mua gói khác), tự chuyển sang model dự phòng và nhớ lại
+        # để các lần sau không thử lại lời gọi chắc chắn thất bại.
+        models_to_try = [shop_model]
+        alt = fallback_for(api_key, shop_model)
+        if alt and alt != shop_model:
+            models_to_try.append(alt)
 
-        try:
-            resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
-        except requests.RequestException as e:
-            raise RuntimeError(f"Lỗi kết nối tới {provider}: {e}")
+        last_error = None
+        for use_model in models_to_try:
+            if model_works(api_key, use_model) is False:
+                continue
 
-        if resp.status_code != 200:
-            raise RuntimeError(f"{provider} Error ({resp.status_code}): {resp.text}")
+            payload = {
+                "model": use_model,
+                "messages": messages
+            }
+            if temperature is not None:
+                payload["temperature"] = temperature
+            if json_mode:
+                payload["response_format"] = {"type": "json_object"}
+            if max_output_tokens:
+                payload["max_tokens"] = int(max_output_tokens)
 
-        try:
-            resp_json = resp.json()
-            text = resp_json["choices"][0]["message"]["content"].strip()
-        except (KeyError, IndexError, ValueError) as e:
-            raise RuntimeError(f"Không đọc được phản hồi từ {provider}: {e} | Raw: {resp.text}")
+            try:
+                resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
+            except requests.RequestException as e:
+                raise RuntimeError(f"Lỗi kết nối tới {provider}: {e}")
 
-        # Model Claude chạy qua endpoint này vẫn bọc kết quả trong ```json
-        # dù đã bật response_format. Dọn sẵn ở đây để mọi handler gọi
-        # json.loads() trực tiếp không bị vỡ.
-        return clean_json_text(text) if json_mode else text
+            if resp.status_code == 200:
+                _remember(api_key, use_model, True)
+                try:
+                    resp_json = resp.json()
+                    text = resp_json["choices"][0]["message"]["content"].strip()
+                except (KeyError, IndexError, ValueError) as e:
+                    raise RuntimeError(f"Không đọc được phản hồi từ {provider}: {e} | Raw: {resp.text}")
+                # Model Claude chạy qua endpoint này vẫn bọc kết quả trong ```json
+                # dù đã bật response_format. Dọn sẵn ở đây để mọi handler gọi
+                # json.loads() trực tiếp không bị vỡ.
+                return clean_json_text(text) if json_mode else text
+
+            body = resp.text
+            # model_not_found: gói key không bán model này -> thử model dự phòng
+            if "model_not_found" in body or "no available channel" in body:
+                _remember(api_key, use_model, False)
+                last_error = RuntimeError(f"{provider} Error ({resp.status_code}): {body}")
+                continue
+
+            raise RuntimeError(f"{provider} Error ({resp.status_code}): {body}")
+
+        raise last_error or RuntimeError(f"{provider}: không có model nào dùng được")
 
     # --- Nhánh 2: Gemini API gốc ---
     else:

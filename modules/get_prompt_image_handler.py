@@ -115,7 +115,10 @@ class GetPromptImageHandler:
             raise ValueError("Chưa cấu hình API Key!")
         # Theo model đang cấu hình trong ai_client, để đổi một chỗ là toàn
         # hệ thống đổi theo (key chỉ bán Claude thì không gọi nhầm Gemini).
-        self.default_model = default_model or ai_client.MODEL_DEEP
+        # Tác vụ ngắn, có khuôn mẫu (mô tả 30-60 từ) -> dùng model NHANH.
+        # Nếu key không bán model này, ai_client tự chuyển sang model dự
+        # phòng nên không bao giờ lỗi model_not_found.
+        self.default_model = default_model or ai_client.MODEL_FAST
 
     # ------------------------------------------------------------------
     # Tiện ích
@@ -366,13 +369,18 @@ Description: "weary commuters stand motionless with lowered heads and slack shou
         """
         Gọi AI theo lô nhỏ. Một lô hỏng chỉ ảnh hưởng lô đó, các lô khác vẫn giữ
         mô tả bám chủ đề (bản cũ hỏng 1 lần là mất sạch toàn bộ scene).
-        """
-        descriptions = {}
 
+        Các lô chạy SONG SONG: với Claude mỗi lô mất 40-60s, chạy tuần tự thì
+        24 scene (2 lô) mất ~2 phút. Chạy đồng thời tổng chỉ còn bằng một lô.
+        """
+        batches = []
         for start in range(0, len(scenes_data), self.SCENES_PER_BATCH):
             batch = scenes_data[start:start + self.SCENES_PER_BATCH]
             batch_no = start // self.SCENES_PER_BATCH + 1
+            batches.append((batch_no, batch))
 
+        def run_one(item):
+            batch_no, batch = item
             try:
                 raw = ai_client.generate_content(
                     api_key=self.api_key,
@@ -392,18 +400,29 @@ Description: "weary commuters stand motionless with lowered heads and slack shou
                 parsed = json.loads(ai_client.clean_json_text(raw))
                 if not isinstance(parsed, dict):
                     raise ValueError("JSON trả về không phải object id -> description")
-
-                for key, value in parsed.items():
-                    cleaned = self._sanitize_description(value)
-                    if cleaned and not self._is_generic(cleaned):
-                        descriptions[str(key).strip()] = cleaned
-                    else:
-                        print(f"[!] Lô {batch_no}: mô tả scene {key} bị loại (chung chung/rỗng)")
-
+                return parsed
             except Exception as e:
                 if ai_client.is_fatal_error(e):
                     raise RuntimeError(f"Không gọi được AI: {e}")
                 print(f"[!] Lô {batch_no} lỗi khi tạo mô tả hình ảnh: {e}")
+                return {}
+
+        if len(batches) == 1:
+            results = [run_one(batches[0])]
+        else:
+            from concurrent.futures import ThreadPoolExecutor
+            # Giới hạn 4 luồng để không chạm rate limit của nhà cung cấp key.
+            with ThreadPoolExecutor(max_workers=min(4, len(batches))) as ex:
+                results = list(ex.map(run_one, batches))
+
+        descriptions = {}
+        for parsed in results:
+            for key, value in parsed.items():
+                cleaned = self._sanitize_description(value)
+                if cleaned and not self._is_generic(cleaned):
+                    descriptions[str(key).strip()] = cleaned
+                else:
+                    print(f"[!] mô tả scene {key} bị loại (chung chung/rỗng)")
 
         return descriptions
 

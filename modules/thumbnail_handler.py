@@ -17,7 +17,10 @@ from . import ai_client
 # Lấy theo model đang cấu hình trong ai_client (biến SHOPAIKEY_MODEL),
 # để đổi model một chỗ là toàn hệ thống đổi theo — tránh tình trạng
 # key chỉ bán Claude nhưng handler vẫn gọi gemini-2.5-flash.
-DEFAULT_MODEL = ai_client.SHOPAIKEY_MODEL
+# Tác vụ ngắn, có khuôn mẫu (mô tả 30-60 từ, tách scene, gán asset) ->
+# dùng model NHANH. Nếu key không bán model này, ai_client tự chuyển
+# sang model dự phòng nên không bao giờ lỗi model_not_found.
+DEFAULT_MODEL = ai_client.MODEL_FAST
 TITLES_MAX_OUTPUT_TOKENS = 2048
 
 LANG_NAMES = {

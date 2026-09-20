@@ -7,7 +7,10 @@ from . import ai_client
 # Lấy theo model đang cấu hình trong ai_client (biến SHOPAIKEY_MODEL),
 # để đổi model một chỗ là toàn hệ thống đổi theo — tránh tình trạng
 # key chỉ bán Claude nhưng handler vẫn gọi gemini-2.5-flash.
-DEFAULT_MODEL = ai_client.SHOPAIKEY_MODEL
+# Tác vụ ngắn, có khuôn mẫu (mô tả 30-60 từ, tách scene, gán asset) ->
+# dùng model NHANH. Nếu key không bán model này, ai_client tự chuyển
+# sang model dự phòng nên không bao giờ lỗi model_not_found.
+DEFAULT_MODEL = ai_client.MODEL_FAST
 ASSET_PROMPTS_MAX_OUTPUT_TOKENS = 8192
 
 # Số asset mỗi lần gọi AI. Bản cũ gửi TẤT CẢ asset trong 1 lần gọi, nên danh
@@ -253,20 +256,32 @@ Use ONLY the master style text above. Do not add another default style, do not r
                 raw = "\n".join(l for l in raw.splitlines() if not l.strip().startswith("```")).strip()
             return raw
 
-        # Vòng 1: chia lô
-        for start in range(0, len(indexed), ASSETS_PER_BATCH):
-            batch = indexed[start:start + ASSETS_PER_BATCH]
-            batch_no = start // ASSETS_PER_BATCH + 1
+        # Vòng 1: chia lô rồi gọi SONG SONG — các lô độc lập nhau.
+        # Với Claude mỗi lô mất 30-50s, chạy tuần tự thì nhiều asset sẽ
+        # khiến tổng thời gian nhân lên theo số lô.
+        batches = [indexed[i:i + ASSETS_PER_BATCH]
+                   for i in range(0, len(indexed), ASSETS_PER_BATCH)]
+
+        def run_batch(batch):
             wanted = {aid for aid, _ in batch}
             try:
                 found = self._parse_prompt_lines(call_ai(batch), kind, wanted)
-                results.update(found)
                 if len(found) < len(batch):
-                    print(f"[!] {kind} lô {batch_no}: AI trả {len(found)}/{len(batch)}, sẽ gọi lại phần thiếu")
+                    print(f"[!] {kind}: AI trả {len(found)}/{len(batch)}, sẽ gọi lại phần thiếu")
+                return found
             except Exception as e:
                 if ai_client.is_fatal_error(e):
                     raise RuntimeError(f"Không gọi được AI: {e}")
-                print(f"[!] {kind} lô {batch_no} lỗi: {e}")
+                print(f"[!] {kind} lô lỗi: {e}")
+                return {}
+
+        if len(batches) == 1:
+            results.update(run_batch(batches[0]))
+        else:
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=min(4, len(batches))) as ex:
+                for part in ex.map(run_batch, batches):
+                    results.update(part)
 
         # Vòng 2-3: gọi lại RIÊNG cho những asset còn thiếu
         for attempt in range(MAX_RETRY_ROUNDS):
