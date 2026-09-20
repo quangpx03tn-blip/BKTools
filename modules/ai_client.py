@@ -22,15 +22,24 @@ from google import genai
 # ShopAIKey bán NHIỀU dòng model trên cùng một endpoint — chỉ cần đổi tên
 # model là chuyển nhà cung cấp, không phải đổi key hay endpoint.
 #
-# Mặc định để Claude Sonnet vì key đang dùng thuộc nhóm claude_discount,
-# nhóm này KHÔNG bán model Gemini — để gemini-* sẽ lỗi model_not_found.
-# Các lựa chọn đã kiểm chứng chạy được:
-#     claude-sonnet-4-5            cân bằng, khuyên dùng
-#     claude-haiku-4-5-20251001    nhẹ và rẻ hơn
-#     claude-opus-4-5              mạnh nhất, đắt hơn
+# Key đang dùng thuộc nhóm claude_discount — nhóm này KHÔNG bán model
+# Gemini, để gemini-* sẽ lỗi model_not_found.
 #
-# Đặt biến môi trường SHOPAIKEY_MODEL để đổi cho TOÀN hệ thống.
+# Tốc độ đo thực tế (sinh 10 topic, cùng prompt):
+#     claude-haiku-4-5-20251001    18.2s
+#     claude-sonnet-4-5            64.2s
+#     claude-opus-4-5              chậm hơn nữa
+#
+# KHÔNG dùng claude-haiku-4-5-20251001 dù nhanh nhất: model này trên
+# ShopAIKey hành xử sai — tự xưng là trợ lý khác, hỏi lại thay vì trả JSON,
+# làm mọi handler parse lỗi. Đã kiểm chứng bằng test thực tế.
+#
+# Sonnet là lựa chọn nhanh nhất trong số các model hoạt động đúng.
 SHOPAIKEY_MODEL = os.environ.get("SHOPAIKEY_MODEL", "claude-sonnet-4-5").strip()
+
+# Model cho việc cần đọc hiểu / suy luận nhiều bước: viết kịch bản dài,
+# thiết kế góc máy theo mạch phim, phân tích ảnh tham chiếu.
+MODEL_DEEP = os.environ.get("SHOPAIKEY_MODEL_DEEP", "claude-sonnet-4-5").strip()
 
 # Model dùng khi gọi trực tiếp Gemini API (SDK google-genai)
 # Lưu ý: dùng tên model có thật, đang được Google hỗ trợ tại thời điểm chạy.

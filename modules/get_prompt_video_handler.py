@@ -28,7 +28,9 @@ from . import ai_client
 # Lấy theo model đang cấu hình trong ai_client (biến SHOPAIKEY_MODEL),
 # để đổi model một chỗ là toàn hệ thống đổi theo — tránh tình trạng
 # key chỉ bán Claude nhưng handler vẫn gọi gemini-2.5-flash.
-DEFAULT_MODEL = ai_client.SHOPAIKEY_MODEL
+# Viết kịch bản / thiết kế góc máy cần đọc hiểu nhiều bước nên dùng
+# model mạnh hơn, chấp nhận chậm hơn để giữ chất lượng.
+DEFAULT_MODEL = ai_client.MODEL_DEEP
 
 # Số scene xử lý mỗi lượt gọi AI. Để nhỏ vì mỗi scene cần AI đọc kỹ cả
 # prompt ảnh lẫn VO; lô quá lớn khiến model đọc lướt và trả về chung chung.

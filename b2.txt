@@ -1,0 +1,7 @@
+Model Topic dang dung: claude-haiku-4-5-20251001
+Model cho viec sau   : claude-sonnet-4-5
+
+❌ Lỗi tạo topics: Expecting value: line 1 column 1 (char 0)
+   5 topic: LOI Expecting value: line 1 column 1 (char 0)
+❌ Lỗi tạo topics: Expecting value: line 1 column 1 (char 0)
+  10 topic: LOI Expecting value: line 1 column 1 (char 0)

@@ -115,7 +115,7 @@ class GetPromptImageHandler:
             raise ValueError("Chưa cấu hình API Key!")
         # Theo model đang cấu hình trong ai_client, để đổi một chỗ là toàn
         # hệ thống đổi theo (key chỉ bán Claude thì không gọi nhầm Gemini).
-        self.default_model = default_model or ai_client.SHOPAIKEY_MODEL
+        self.default_model = default_model or ai_client.MODEL_DEEP
 
     # ------------------------------------------------------------------
     # Tiện ích
