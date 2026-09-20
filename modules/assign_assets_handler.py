@@ -507,6 +507,10 @@ Return every scene exactly once, in the same id order. No markdown, no commentar
                     characters, backgrounds, prev_character, prev_background
                 )
             except Exception as e:
+                # Lỗi key/credit thì mọi lô sau cũng hỏng -> dừng ngay và báo,
+                # thay vì trả về fallback cho toàn bộ scene.
+                if ai_client.is_fatal_error(e):
+                    raise RuntimeError(f"Không gọi được AI: {e}")
                 print(f"[!] Assign lô {batch_no} lỗi, dùng fallback cho lô này: {e}")
                 batch_result = []
                 for scene in batch:

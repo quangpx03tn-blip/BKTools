@@ -530,7 +530,10 @@ def api_generate_topics():
             yeu_cau_bo_sung=data.get('yeu_cau_bo_sung'),
             style_guide=data.get('style_guide', ''),
             dna=data.get('dna', ''),
-            topic_bank=data.get('topic_bank', '')
+            topic_bank=data.get('topic_bank', ''),
+            # Key người dùng nhập ở sidebar — thiếu dòng này thì module tự
+            # đọc .env, trên server không có file đó nên luôn lỗi 401.
+            api_key=(data.get('api_key') or '').strip()
         )
         return jsonify({"status": "success", "data": result})
     except Exception as e:

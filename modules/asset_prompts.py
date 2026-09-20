@@ -264,6 +264,8 @@ Use ONLY the master style text above. Do not add another default style, do not r
                 if len(found) < len(batch):
                     print(f"[!] {kind} lô {batch_no}: AI trả {len(found)}/{len(batch)}, sẽ gọi lại phần thiếu")
             except Exception as e:
+                if ai_client.is_fatal_error(e):
+                    raise RuntimeError(f"Không gọi được AI: {e}")
                 print(f"[!] {kind} lô {batch_no} lỗi: {e}")
 
         # Vòng 2-3: gọi lại RIÊNG cho những asset còn thiếu
@@ -278,6 +280,8 @@ Use ONLY the master style text above. Do not add another default style, do not r
                 try:
                     results.update(self._parse_prompt_lines(call_ai(batch), kind, wanted))
                 except Exception as e:
+                    if ai_client.is_fatal_error(e):
+                        raise RuntimeError(f"Không gọi được AI: {e}")
                     print(f"[!] {kind} retry lỗi: {e}")
 
         still_missing = [aid for aid, _ in indexed if aid not in results]

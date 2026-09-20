@@ -63,6 +63,24 @@ def is_claude_key(api_key: str) -> bool:
     """
     return (api_key or "").strip().startswith("sk-ant-")
 
+def is_fatal_error(err) -> bool:
+    """
+    Lỗi KHÔNG thể chữa bằng cách thử lại hay dùng dữ liệu dự phòng:
+    sai key, key bị thu hồi, hết credit, vượt hạn mức.
+
+    Những lỗi này phải báo thẳng cho người dùng. Nuốt chúng rồi trả về
+    fallback là tệ nhất — giao diện báo "thành công" trong khi kết quả
+    hoàn toàn không do AI sinh ra.
+    """
+    msg = str(err).lower()
+    dau_hieu = (
+        "invalid_api_key", "authentication failed", "xác thực thất bại",
+        "unauthorized", "(401)", "(403)", "permission_denied",
+        "insufficient", "quota", "hết hạn mức", "billing",
+    )
+    return any(d in msg for d in dau_hieu)
+
+
 # --- NGÔN NGỮ ĐẦU RA ---
 # Giao diện gửi nhãn tiếng Việt ("Tiếng Hàn"). Nhét thẳng nhãn này vào một
 # prompt tiếng Anh thì chỉ thị rất yếu, model hay bỏ qua. Map sang tên chuẩn

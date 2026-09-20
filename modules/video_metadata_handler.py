@@ -144,5 +144,9 @@ TÔNG GIỌNG YÊU CẦU:
         }
 
     except Exception as e:
+        # Sai key / hết credit thì KHÔNG được im lặng dùng fallback:
+        # người dùng sẽ tưởng AI đã chạy trong khi nhận kết quả ghép máy móc.
+        if ai_client.is_fatal_error(e):
+            raise RuntimeError(f"Không gọi được AI: {e}")
         print(f"[!] Lỗi generate metadata, dùng fallback cục bộ: {e}")
         return _fallback_metadata(subject, summary, keyword, cta)

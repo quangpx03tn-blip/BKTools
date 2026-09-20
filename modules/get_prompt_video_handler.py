@@ -369,8 +369,11 @@ Trả về JSON thuần, không kèm markdown. Đúng {len(batch)} phần tử,
             batch = enriched[i:i + BATCH_SIZE]
             try:
                 results.update(self._analyze_batch(batch, motion_style, vo_lang))
-            except Exception:
-                # Lô lỗi thì để fallback lo, không làm sập cả tiến trình
+            except Exception as e:
+                # Sai key / hết credit thì mọi lô sau cũng hỏng -> báo ngay.
+                if ai_client.is_fatal_error(e):
+                    raise RuntimeError(f"Không gọi được AI: {e}")
+                # Lô lỗi lẻ thì để fallback lo, không làm sập cả tiến trình
                 continue
 
         # Ghép kết quả cuối

@@ -1137,7 +1137,11 @@
                         yeu_cau_bo_sung: document.getElementById('yeuCauBoSungInput')?.value || '',
                         style_guide: savedProjectData['topic-ideator']?.style_guide || window.activeProfileStyleGuide || "",
                         dna: savedProjectData['topic-ideator']?.dna || window.activeProfileDna || "",
-                        topic_bank: savedProjectData['topic-ideator']?.topic_bank || window.activeProfileTopicBank || ""
+                        topic_bank: savedProjectData['topic-ideator']?.topic_bank || window.activeProfileTopicBank || "",
+                        // Key nhập ở sidebar — các tool khác đều gửi lên,
+                        // riêng Topic Ideator trước đây bỏ sót nên lỗi 401.
+                        api_key: (document.getElementById('sidebarApiKeyInput')?.value || '').trim()
+                                 || localStorage.getItem('bk_gemini_api_key') || ''
                     };
 
                     const container = document.getElementById('topicsResultContainer');

@@ -677,6 +677,10 @@ class CameraHandler:
                 else:
                     note = "AI không trả về dữ liệu hợp lệ — đã dùng bộ luật dự phòng."
             except Exception as e:
+                # Sai key / hết credit: báo thẳng thay vì trả bảng shot dựng
+                # bằng heuristic mà người dùng tưởng là AI phân tích.
+                if ai_client.is_fatal_error(e):
+                    raise RuntimeError(f"Không gọi được AI: {e}")
                 note = f"Lỗi gọi AI ({e}) — đã dùng bộ luật dự phòng."
         else:
             note = "Chưa có API Key — đang dùng bộ luật dự phòng, chất lượng hạn chế."

@@ -286,6 +286,10 @@ Identify what this video is actually about, build the visual vocabulary the whol
                 "asset_visuals": visuals,
             }
         except Exception as e:
+            # Sai key / hết credit -> báo ngay, đừng để prompt rơi về mô tả
+            # chung chung mà người dùng tưởng là AI viết.
+            if ai_client.is_fatal_error(e):
+                raise RuntimeError(f"Không gọi được AI: {e}")
             print(f"[!] Không phân tích được chủ đề kịch bản: {e}")
             return {"subject": "", "era_setting": "", "motifs": [], "mood": "", "asset_visuals": {}}
 
@@ -397,6 +401,8 @@ Description: "weary commuters stand motionless with lowered heads and slack shou
                         print(f"[!] Lô {batch_no}: mô tả scene {key} bị loại (chung chung/rỗng)")
 
             except Exception as e:
+                if ai_client.is_fatal_error(e):
+                    raise RuntimeError(f"Không gọi được AI: {e}")
                 print(f"[!] Lô {batch_no} lỗi khi tạo mô tả hình ảnh: {e}")
 
         return descriptions

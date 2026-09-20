@@ -4,7 +4,13 @@ from modules import ai_client
 
 
 def _load_api_key_from_env_file():
-    """Đọc GEMINI_API_KEY từ file .env nếu có, fallback sang biến môi trường."""
+    """
+    Đọc GEMINI_API_KEY từ file .env nếu có, fallback sang biến môi trường.
+
+    Chỉ dùng làm PHƯƠNG ÁN DỰ PHÒNG khi giao diện không gửi key lên.
+    Trên server (Railway) không có file .env, và mỗi người dùng nhập key
+    riêng ở sidebar — nên key từ giao diện phải được ưu tiên.
+    """
     api_key = ""
     if os.path.exists('.env'):
         with open('.env', 'r', encoding='utf-8') as f:
@@ -17,8 +23,12 @@ def _load_api_key_from_env_file():
     return api_key
 
 
-def process_topics(ngach_kenh, so_topics, ngon_ngu, focus, yeu_cau_bo_sung="", style_guide="", dna="", topic_bank=""):
-    api_key = _load_api_key_from_env_file()
+def process_topics(ngach_kenh, so_topics, ngon_ngu, focus, yeu_cau_bo_sung="",
+                   style_guide="", dna="", topic_bank="", api_key=""):
+    # Ưu tiên key người dùng nhập ở sidebar; chỉ rơi về .env khi không có.
+    # Trước đây module này CHỈ đọc .env nên trên web luôn dùng key cũ/rỗng,
+    # gây lỗi 401 dù các tool khác vẫn chạy bình thường.
+    api_key = (api_key or "").strip() or _load_api_key_from_env_file()
 
     if not api_key:
         raise ValueError("Chưa cấu hình API Key!")
