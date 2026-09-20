@@ -126,7 +126,7 @@ def generate_content(api_key: str, prompt: str, system_prompt: str = None,
                       json_mode: bool = False,
                       temperature: float = None,
                       max_output_tokens: int = None,
-                      timeout: int = 60) -> str:
+                      timeout: int = 180) -> str:
     """
     Gọi AI sinh nội dung text từ 1 prompt, tự động chọn đúng nhà cung cấp
     dựa trên định dạng của api_key.

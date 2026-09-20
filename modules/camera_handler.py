@@ -12,7 +12,10 @@ ngữ cảnh từng câu thoại rồi thiết kế:
     - Lý do chọn góc (giải thích cho người dựng)
 
 Khác với bản cũ (chuỗi if/else khớp từ khóa tiếng Việt cứng), module này gọi
-AI qua ai_client.generate_content() nên chạy đúng với MỌI ngôn ngữ và mọi
+AI qua ai_client.generate_content(,
+            # Mặc định của ai_client chỉ 60s — Claude sinh nội dung dài thường vượt ngưỡng này.
+            timeout=180,
+        ) nên chạy đúng với MỌI ngôn ngữ và mọi
 chủ đề kênh. Khi không có API key hoặc AI lỗi, tự rơi về bộ luật heuristic
 (không phụ thuộc ngôn ngữ) để người dùng vẫn có bảng làm việc.
 """

@@ -96,6 +96,8 @@ Chỉ trả JSON thuần:
         json_mode=True,
         temperature=0.8,
         max_output_tokens=TITLES_MAX_OUTPUT_TOKENS,
+        # Mặc định của ai_client chỉ 60s — Claude sinh nội dung dài thường vượt ngưỡng này.
+        timeout=180,
     )
 
     data = json.loads(raw)
@@ -153,6 +155,8 @@ Chỉ trả JSON thuần:
         json_mode=True,
         temperature=0.6,
         max_output_tokens=1024,
+        # Mặc định của ai_client chỉ 60s — Claude sinh nội dung dài thường vượt ngưỡng này.
+        timeout=180,
     )
     data = json.loads(raw)
     return {
@@ -368,6 +372,8 @@ Chỉ trả JSON thuần:
             max_output_tokens=2048,
             gemini_model=use_model,
             shop_model=use_model,
+            # Mặc định của ai_client chỉ 60s — Claude sinh nội dung dài thường vượt ngưỡng này.
+            timeout=180,
         )
     else:
         # Không có ảnh -> chỉ dùng text
@@ -379,6 +385,8 @@ Chỉ trả JSON thuần:
             max_output_tokens=2048,
             gemini_model=use_model,
             shop_model=use_model,
+            # Mặc định của ai_client chỉ 60s — Claude sinh nội dung dài thường vượt ngưỡng này.
+            timeout=180,
         )
 
     data = json.loads(ai_client.clean_json_text(raw))

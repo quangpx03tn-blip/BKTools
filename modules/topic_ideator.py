@@ -80,7 +80,9 @@ def process_topics(ngach_kenh, so_topics, ngon_ngu, focus, yeu_cau_bo_sung="",
             prompt=prompt,
             system_prompt="You are a helpful assistant designed to output JSON.",
             json_mode=True,
-            temperature=0.7
+            temperature=0.7,
+            # Mặc định của ai_client chỉ 60s — Claude sinh nội dung dài thường vượt ngưỡng này.
+            timeout=180,
         )
 
         # Loại bỏ các ký tự markdown (```json ... ```) nếu AI lỡ trả kèm theo

@@ -63,7 +63,9 @@ def extract_from_files(style_guide="", dna="", topic_bank="", api_key=""):
             prompt=prompt,
             system_prompt="You are a helpful assistant designed to output JSON.",
             json_mode=True,
-            temperature=0.3
+            temperature=0.3,
+            # Mặc định của ai_client chỉ 60s — Claude sinh nội dung dài thường vượt ngưỡng này.
+            timeout=180,
         )
 
         raw_text = ai_client.clean_json_text(raw_text)
