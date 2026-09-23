@@ -219,9 +219,22 @@ def generate_content(api_key: str, prompt: str, system_prompt: str = None,
             "Content-Type": "application/json",
             "Authorization": f"Bearer {api_key}"
         }
+
+        # Endpoint ShopAIKey TỪ CHỐI response_format với model Claude
+        # (trả 403 permission_denied), dù Claude chấp nhận. Gemini thì nhận
+        # bình thường. Nên với Claude ta ép JSON bằng chỉ thị trong system
+        # prompt thay vì tham số — và vẫn dọn ```json ở đầu ra như cũ.
+        json_via_param = json_mode
+        sys_text = system_prompt or ""
+        if json_mode and shop_model.lower().startswith("claude"):
+            json_via_param = False
+            rule = ("You must reply with one valid JSON object only. "
+                    "No markdown fences, no commentary before or after.")
+            sys_text = f"{sys_text}\n\n{rule}".strip() if sys_text else rule
+
         messages = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
+        if sys_text:
+            messages.append({"role": "system", "content": sys_text})
         messages.append({"role": "user", "content": prompt})
 
         # Thử model được yêu cầu trước; nếu nhà cung cấp báo không có model
@@ -237,13 +250,28 @@ def generate_content(api_key: str, prompt: str, system_prompt: str = None,
             if model_works(api_key, use_model) is False:
                 continue
 
+            # Nếu model dự phòng khác họ (claude <-> gemini) thì cách ép JSON
+            # cũng phải đổi theo cho đúng với model đó.
+            use_param = json_via_param
+            msgs = messages
+            if use_model != shop_model and json_mode:
+                if use_model.lower().startswith("claude"):
+                    use_param = False
+                    if not any("valid JSON object only" in (m.get("content") or "")
+                               for m in msgs if m.get("role") == "system"):
+                        rule = ("You must reply with one valid JSON object only. "
+                                "No markdown fences, no commentary before or after.")
+                        msgs = [{"role": "system", "content": rule}] + msgs
+                else:
+                    use_param = True
+
             payload = {
                 "model": use_model,
-                "messages": messages
+                "messages": msgs
             }
             if temperature is not None:
                 payload["temperature"] = temperature
-            if json_mode:
+            if use_param:
                 payload["response_format"] = {"type": "json_object"}
             if max_output_tokens:
                 payload["max_tokens"] = int(max_output_tokens)
@@ -266,8 +294,20 @@ def generate_content(api_key: str, prompt: str, system_prompt: str = None,
                 return clean_json_text(text) if json_mode else text
 
             body = resp.text
-            # model_not_found: gói key không bán model này -> thử model dự phòng
-            if "model_not_found" in body or "no available channel" in body:
+            low = body.lower()
+
+            # Những lỗi CHỈ ẢNH HƯỞNG MODEL NÀY, không phải cả key:
+            #   - model_not_found      : gói key không bán model này
+            #   - permission_denied/403: gói cho riêng model này hết hạn mức
+            #                            (các model khác của cùng key vẫn chạy)
+            # -> nhớ lại là model này không dùng được, rồi thử model dự phòng.
+            model_level_error = (
+                "model_not_found" in low
+                or "no available channel" in low
+                or resp.status_code == 403
+                or "permission_denied" in low
+            )
+            if model_level_error:
                 _remember(api_key, use_model, False)
                 last_error = RuntimeError(f"{provider} Error ({resp.status_code}): {body}")
                 continue

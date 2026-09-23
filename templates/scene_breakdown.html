@@ -648,12 +648,24 @@
                 /^\s*[=_]{3,}\s*$/,
                 /^\s*\[\s*(kiểm tra cài đặt|kiem tra cai dat|thống kê|thong ke|metadata|ghi chú|ghi chu|note|notes|producer notes|production notes|dàn ý|dan y|outline|research summary|tóm tắt|tom tat|source|sources|nguồn|nguon|reference|references|citation)[^\]]*\].*$/i,
                 /^\s*(\[.*\])?\s*(ngôn ngữ|ngon ngu|cấu trúc|cau truc|số phần|so phan|thời lượng|thoi luong|pov|model used|word count|duration|estimated minutes|thực viết|thuc viet)\s*[:：|].*$/i,
-                /^\s*(chủ đề video|chu de video|topic|title|tiêu đề|tieu de)\s*[:：].*$/i,
+                // Dòng nhãn metadata đầu kịch bản: "Chủ đề:", "Tiêu đề:",
+                // "Nhân vật:", "Bối cảnh:"... Chỉ bỏ khi phần sau NGẮN
+                // (<80 ký tự) và không có dấu kết câu — để không xóa nhầm
+                // câu thoại thật có dạng "Anh ấy nói: ...".
+                /^\s*(chủ đề video|chu de video|chủ đề|chu de|topic|title|tiêu đề|tieu de|nhân vật|nhan vat|bối cảnh|boi canh|giọng đọc|giong doc|tone|mục tiêu|muc tieu|đối tượng|doi tuong|keyword|từ khóa|tu khoa)\s*[:：]\s*[^.!?…]{0,80}$/i,
                 /^\s*(style guide|dna kênh|dna kenh|topic bank|context bổ sung|context bo sung|profile|danh sách file|danhsach file)\s*[:：\-].*$/i,
                 /^\s*(sfx|music|bgm|sound|visual|camera|shot|b-roll|b roll|cut to|transition|scene|cảnh|canh|production note|producer note)\s*[:：].*$/i,
                 /^\s*\((sfx|music|bgm|visual|camera|shot|b-roll|cut|transition|pause|beat|silence)[^)]+\)\s*$/i,
                 /^\s*\[\s*(sfx|music|bgm|visual|camera|shot|b-roll|cut|transition|pause|beat|silence|scene|cảnh|canh)[^\]]*\]\s*$/i,
-                /^\s*(phần|phan|part|chapter|section|level|episode|đoạn|doan)\s*[\dIVXLCDMivxlcdm一二三四五六七八九十]+\s*[:：.)\-–—]?.{0,160}$/i,
+                /^\s*(phần|phan|part|chapter|section|level|episode|đoạn|doan|chương|chuong)\s*[\dIVXLCDMivxlcdm一二三四五六七八九十]+\s*[:：.)\-–—]?.{0,160}$/i,
+                // Dòng chỉ là số thứ tự: "1." "2)" "3 -" "IV."
+                /^\s*[\dIVXLCDMivxlcdm]{1,4}\s*[.):\-–—]\s*$/,
+                // Dòng tiêu đề ngắn đánh số: "1. Mở đầu", "2) Bối cảnh"
+                // Chỉ bỏ khi NGẮN (<60 ký tự) và không kết thúc bằng dấu câu
+                // -> tránh xóa nhầm câu thoại thật bắt đầu bằng số.
+                /^\s*\d{1,3}\s*[.):\-–—]\s+\S[^.!?…]{0,58}$/,
+                // Dòng chỉ gồm ký hiệu trang trí: *** ### ___ ===
+                /^\s*[*#_=~\-–—•·]{2,}\s*$/,
                 /^\s*(mở đầu|mo dau|intro|introduction|hook|thân bài|than bai|cao trào|cao trao|kết luận|ket luan|outro|closing|conclusion)\s*[:：.)\-–—]?.{0,160}$/i,
                 /^\s*제\s*\d+\s*(장|부|막)\s*[:：.)\-–—]?.{0,160}$/i,
                 /^\s*(인트로|오프닝|후킹|결론|마무리)\s*[:：.)\-–—]?.{0,160}$/i,
@@ -681,9 +693,21 @@
                 }
 
                 if (!line) {
-                    if (cleanedLines.length && cleanedLines[cleanedLines.length - 1] !== '') {
-                        cleanedLines.push('');
-                    }
+                    // Dòng trống bị bỏ hẳn: kết quả cuối là một khối văn xuôi
+                    // liền mạch, không giữ bất kỳ xuống dòng nào.
+                    return;
+                }
+
+                // So mẫu loại bỏ NGAY TRÊN DÒNG GỐC trước, vì nhãn metadata
+                // thường được in đậm: "**Chủ đề:** ..." — nếu gỡ markdown
+                // trước thì mẫu "^Chủ đề:" vẫn khớp, nhưng "**Phần 2**"
+                // sau khi gỡ lại thành "Phần 2" và lọt qua vòng kiểm tra đầu.
+                const strippedForCheck = line
+                    .replace(/\*\*(.*?)\*\*/g, '$1')
+                    .replace(/__(.*?)__/g, '$1')
+                    .trim();
+                if (fullDropPatterns.some(pattern => pattern.test(strippedForCheck))) {
+                    removedLines++;
                     return;
                 }
 
@@ -714,9 +738,26 @@
                 cleanedLines.push(normalizedLine);
             });
 
-            const cleanedText = cleanedLines.join('\n')
-                .replace(/\n{3,}/g, '\n\n')
-                .replace(/[ \t]{2,}/g, ' ')
+            // Ghép toàn bộ thành MỘT KHỐI VĂN XUÔI LIỀN MẠCH.
+            // Tool 2 tự tách scene theo dấu câu, nên mọi xuống dòng trong
+            // kịch bản gốc đều là rác: giữ lại chỉ làm scene bị cắt vụn.
+            let cleanedText = cleanedLines
+                .filter(l => l.trim())
+                .join(' ');
+
+            cleanedText = cleanedText
+                // Bỏ ký hiệu markdown còn sót giữa dòng: * _ ~ # `
+                .replace(/[*_~`#]+/g, '')
+                // Bỏ đánh số đầu câu còn sót: "1." "2)" "3 -" sau khi đã gộp dòng
+                .replace(/(^|[.!?…]\s+)\d{1,3}\s*[.):\-–—]\s+/g, '$1')
+                // Bỏ "Phần 1:", "Part 2 -", "Đoạn 3." nằm giữa câu
+                .replace(/(^|[.!?…]\s+)(phần|phan|part|chapter|section|đoạn|doan|chương|chuong)\s*[\dIVXLCDMivxlcdm]+\s*[:：.)\-–—]?\s*/gi, '$1')
+                // Gộp khoảng trắng thừa
+                .replace(/\s{2,}/g, ' ')
+                // Bỏ khoảng trắng trước dấu câu
+                .replace(/\s+([,.!?;:…])/g, '$1')
+                // Đảm bảo có khoảng trắng sau dấu câu
+                .replace(/([,.!?;:…])(?=[^\s\d])/g, '$1 ')
                 .trim();
 
             return {
@@ -748,7 +789,7 @@
                 const statusBox = document.getElementById('filterStatusBox');
                 if (statusBox) {
                     const removedChars = Math.max(0, filtered.beforeChars - filtered.afterChars);
-                    statusBox.innerHTML = `<span class="text-cyan-400 font-semibold">✔ Đã lọc thông minh:</span> Giữ lại phần VO, loại ${filtered.removedLines} dòng metadata/heading/kỹ thuật và ${removedChars.toLocaleString('vi-VN')} ký tự thừa.`;
+                    statusBox.innerHTML = `<span class="text-cyan-400 font-semibold">✔ Đã lọc sạch:</span> Loại ${filtered.removedLines} dòng tiêu đề/đánh số/ghi chú kỹ thuật, gỡ toàn bộ ký hiệu <code class="text-slate-400">* # _</code> và xuống dòng — còn lại ${filtered.afterChars.toLocaleString('vi-VN')} ký tự kịch bản thuần (giảm ${removedChars.toLocaleString('vi-VN')}).`;
                 }
 
                 setActionButtonState('filterScriptBtn', cleanedText ? 'success' : 'error');
