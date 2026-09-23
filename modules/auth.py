@@ -113,10 +113,53 @@ def user_data_root(data_dir: str) -> str:
     return root
 
 
+def _migrate_legacy(data_dir: str, kind: str, dest: str):
+    """
+    Chuyển dữ liệu từ bố cục CŨ (dùng chung) sang thư mục riêng của người dùng.
+
+    Trước khi có đăng nhập Google, mọi project/profile nằm chung ở
+    <DATA_DIR>/projects và <DATA_DIR>/profiles. Sau khi tách theo tài khoản,
+    số dữ liệu đó vẫn nằm nguyên chỗ cũ và không tool nào đọc tới — người
+    dùng thấy như bị mất sạch.
+
+    Hàm này COPY (không xóa bản gốc) sang thư mục của tài khoản đầu tiên
+    mở tới. Giữ bản gốc để nếu di trú sai tài khoản vẫn còn đường lùi.
+    Chỉ chạy một lần: đánh dấu bằng file .migrated trong thư mục đích.
+    """
+    legacy = os.path.join(data_dir, kind)
+    if not os.path.isdir(legacy):
+        return
+
+    marker = os.path.join(dest, ".migrated")
+    if os.path.exists(marker):
+        return
+
+    import shutil
+    moved = 0
+    try:
+        for name in os.listdir(legacy):
+            if not name.endswith(".json"):
+                continue
+            src = os.path.join(legacy, name)
+            dst = os.path.join(dest, name)
+            # Không ghi đè thứ người dùng đã tạo sau này
+            if os.path.isfile(src) and not os.path.exists(dst):
+                shutil.copy2(src, dst)
+                moved += 1
+        with open(marker, "w", encoding="utf-8") as f:
+            f.write(str(moved))
+        if moved:
+            print(f"[i] Đã chuyển {moved} file {kind} từ bố cục cũ sang {dest}")
+    except OSError as e:
+        # Di trú hỏng không được phép chặn người dùng dùng tool
+        print(f"[!] Không chuyển được dữ liệu cũ ({kind}): {e}")
+
+
 def user_projects_root(data_dir: str) -> str:
     """<DATA_DIR>/users/<key>/projects — tự tạo nếu chưa có."""
     path = os.path.join(user_data_root(data_dir), "projects")
     os.makedirs(path, exist_ok=True)
+    _migrate_legacy(data_dir, "projects", path)
     return path
 
 
@@ -124,6 +167,7 @@ def user_profiles_root(data_dir: str) -> str:
     """<DATA_DIR>/users/<key>/profiles — tự tạo nếu chưa có."""
     path = os.path.join(user_data_root(data_dir), "profiles")
     os.makedirs(path, exist_ok=True)
+    _migrate_legacy(data_dir, "profiles", path)
     return path
 
 
