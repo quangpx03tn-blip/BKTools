@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BK Tools · Dựng video</title>
+  <link rel="stylesheet" href="/static/video-builder.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><strong>BK TOOLS</strong><small>PRODUCTION SUITE</small></div>
+    <div class="context"><span>PROJECT ĐANG DÙNG</span><strong id="projectLabel">—</strong><span>PROFILE KÊNH</span><strong id="profileLabel">—</strong></div>
+    <nav aria-label="Công cụ">
+      <a href="/">0 · Topic Ideator</a>
+      <a href="/script_writer.html">1 · Script Writer</a>
+      <a href="/scene_breakdown.html">2 · Scene Breakdown</a>
+      <a href="/asset_prompts.html">3 · Asset Prompts</a>
+      <a class="active" href="/camera_movement.html">4 · Dựng video</a>
+      <a href="/thumbnail.html">5 · Thumbnail</a>
+      <a href="/video_metadata.html">6 · Video Metadata</a>
+      <a href="/upload_qc.html">7 · Upload QC</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <label for="apiKeyInput">API KEY ĐỂ PHÂN TÍCH CẢNH</label>
+      <div class="key-row"><input id="apiKeyInput" type="password" autocomplete="off" placeholder="Nhập key nếu cần dùng AI"><button id="saveKeyBtn" type="button">Lưu</button></div>
+      <a href="/camera-designer.html">Mở Camera &amp; Shot Designer cũ ↗</a>
+    </div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <div><span class="eyebrow">TOOL 4 · VIDEO PRODUCTION</span><h1>Xưởng dựng video</h1><p>Đi từ cảnh đã duyệt đến gói dựng có thể chỉnh sửa.</p></div>
+      <span id="saveStatus" class="save-status">Sẵn sàng</span>
+    </header>
+
+    <div class="content">
+      <div class="progress" aria-label="Tiến trình">
+        <a href="#sourceCard"><b>01</b><span>Cảnh &amp; lời thoại</span></a>
+        <a href="#sceneCard"><b>02</b><span>Thiết kế cảnh</span></a>
+        <a href="#mediaCard"><b>03</b><span>Ảnh &amp; clip</span></a>
+        <a href="#audioCard"><b>04</b><span>Âm thanh &amp; xuất</span></a>
+      </div>
+
+      <section class="metrics" aria-label="Tình trạng dự án">
+        <div><small>TỔNG CẢNH</small><strong id="metricScenes">0</strong></div>
+        <div><small>THỜI LƯỢNG</small><strong id="metricDuration">0:00</strong></div>
+        <div><small>ĐÃ GẮN HÌNH</small><strong id="metricMedia">0/0</strong></div>
+        <div><small>CẦN XỬ LÝ</small><strong id="metricMissing">0</strong></div>
+      </section>
+
+      <section class="card" id="sourceCard">
+        <div class="section-heading"><div><span class="step">BƯỚC 01</span><h2>Chọn nguồn cảnh</h2><p>Nhập cảnh từ Tool 2 hoặc dán SRT có timecode. Bước này chỉ cập nhật project hiện tại.</p></div></div>
+        <div class="source-actions">
+          <button id="importTool2Btn" class="primary" type="button">Nhập cảnh từ Tool 2</button>
+          <button id="importCameraBtn" type="button">Nhập shot đã thiết kế</button>
+          <label class="file-button">Mở file SRT<input id="srtFileInput" type="file" accept=".srt,.vtt,text/plain" hidden></label>
+        </div>
+        <label for="srtInput" class="field-label">HOẶC DÁN SRT</label>
+        <textarea id="srtInput" rows="5" placeholder="1&#10;00:00:00,000 --> 00:00:05,000&#10;Lời thoại của cảnh đầu tiên..."></textarea>
+        <div class="source-footer"><span id="sourceHint">Chưa có cảnh. Bắt đầu bằng một nguồn ở trên.</span><button id="parseSrtBtn" type="button">Tạo cảnh từ SRT</button></div>
+      </section>
+
+      <section class="card" id="sceneCard">
+        <div class="section-heading"><div><span class="step">BƯỚC 02</span><h2>Thiết kế cảnh</h2><p>Chỉnh lời thoại, thời lượng, góc máy và prompt. AI chỉ chạy khi bạn bấm phân tích.</p></div><button id="analyzeBtn" class="primary" type="button">Phân tích góc máy bằng AI</button></div>
+        <div class="settings-row"><label>Nhịp dựng<select id="paceSelect"><option value="4">Nhanh · khoảng 4 giây</option><option value="6" selected>Vừa · khoảng 6 giây</option><option value="8">Chậm · khoảng 8 giây</option></select></label><label>Phong cách hình<input id="styleInput" placeholder="Ví dụ: hoạt hình lịch sử, nét vẽ nhất quán"></label><button id="promptsBtn" type="button">Tạo prompt nền cho cảnh</button></div>
+        <div id="sceneList" class="scene-list"><div class="empty">Cảnh sau khi nhập sẽ xuất hiện tại đây.</div></div>
+        <div id="scenePager" class="source-footer" hidden><button id="prevPageBtn" type="button">← Trang trước</button><span id="pageLabel"></span><button id="nextPageBtn" type="button">Trang sau →</button></div>
+      </section>
+
+      <section class="card" id="mediaCard">
+        <div class="section-heading"><div><span class="step">BƯỚC 03</span><h2>Gắn ảnh hoặc clip</h2><p>Chọn nhiều file để tự ghép theo tên như <code>scene_001.png</code>, hoặc gắn riêng trong từng cảnh.</p></div><label class="file-button primary">Chọn nhiều file<input id="bulkMediaInput" type="file" accept="image/*,video/mp4,video/webm,video/quicktime" multiple hidden></label></div>
+        <div id="mediaHint" class="notice">File chỉ được giữ trong phiên trình duyệt hiện tại. Nếu tải lại trang, hãy chọn lại file trước khi xuất gói.</div>
+        <div id="unmatchedFiles" class="unmatched" hidden></div>
+      </section>
+
+      <section class="card" id="audioCard">
+        <div class="section-heading"><div><span class="step">BƯỚC 04</span><h2>Âm thanh &amp; gói dựng</h2><p>Nạp giọng đọc, phụ đề và nhạc nếu có. Xuất một ZIP gồm media, timeline, prompt và manifest.</p></div></div>
+        <div class="audio-grid">
+          <label>Giọng đọc<input id="voiceInput" type="file" accept=".mp3,.wav,.m4a,.aac,.ogg,audio/*"><small id="voiceName">Chưa chọn file</small></label>
+          <label>Phụ đề SRT<input id="subtitleInput" type="file" accept=".srt,.vtt,text/plain"><small id="subtitleName">Có thể dùng SRT ở bước 01</small></label>
+          <label>Nhạc nền<input id="musicInput" type="file" accept=".mp3,.wav,.m4a,.aac,.ogg,audio/*"><small id="musicName">Tùy chọn</small></label>
+        </div>
+        <div id="packageChecklist" class="checklist"></div>
+        <div class="export-row"><div><strong>Gói dựng có thể chỉnh sửa</strong><span>Gồm timeline.csv, manifest.json, prompts.txt và các file đã nạp. Chưa phải dự án CapCut tự động.</span></div><button id="exportBtn" class="primary" type="button">Tải gói dựng ZIP</button></div>
+      </section>
+    </div>
+  </main>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="/static/video-builder.js" defer></script>
+</body>
+</html>

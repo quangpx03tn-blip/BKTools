@@ -8,6 +8,8 @@ import json
 import re
 import zipfile
 import io
+import csv
+import tempfile
 import uuid
 import time
 import secrets
@@ -284,7 +286,112 @@ def asset_prompts_page():
 # Route cho trang Camera Movement (Tool 4)
 @app.route('/camera_movement.html')
 def camera_movement_page():
+    return render_template('video_builder.html')
+
+
+@app.route('/camera-designer.html')
+def camera_designer_page():
+    """Keep the original shot designer available while Tool 4 becomes a production board."""
     return render_template('camera_movement_v2.html')
+
+
+@app.route('/api/video-builder/package', methods=['POST'])
+def api_video_builder_package():
+    """Package an editable scene plan and user supplied media without storing uploads."""
+    max_bytes = 1024 * 1024 * 1024
+    if request.content_length and request.content_length > max_bytes:
+        return jsonify({"status": "error", "message": "Gói dựng vượt quá 1 GB."}), 413
+
+    try:
+        raw_manifest = request.form.get('manifest', '')
+        if len(raw_manifest) > 2_000_000:
+            raise ValueError('Dữ liệu cảnh quá lớn.')
+        manifest = json.loads(raw_manifest)
+        scenes = manifest.get('scenes') if isinstance(manifest, dict) else None
+        if not isinstance(scenes, list) or not scenes or len(scenes) > 1000:
+            raise ValueError('Cần từ 1 đến 1000 cảnh hợp lệ để xuất gói.')
+        assets = request.files.getlist('assets')
+        if len(assets) > len(scenes):
+            raise ValueError('Số tệp hình/clip không khớp số cảnh.')
+
+        allowed_media = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.mp4', '.mov', '.webm'}
+        allowed_audio = {'.mp3', '.wav', '.m4a', '.aac', '.ogg'}
+        project_name = re.sub(r'[^\w-]+', '_', str(manifest.get('project', 'video')),
+                              flags=re.UNICODE).strip('_')[:80] or 'video'
+        temp_file = tempfile.TemporaryFile(mode='w+b')
+
+        def write_upload(archive, upload, dest_base, allowed):
+            if not upload or not upload.filename:
+                return None
+            ext = os.path.splitext(upload.filename)[1].lower()
+            if ext not in allowed:
+                raise ValueError(f'Định dạng tệp không được hỗ trợ: {ext or "không có đuôi"}')
+            archive_name = f'{dest_base}{ext}'
+            with archive.open(archive_name, 'w', force_zip64=True) as out:
+                while True:
+                    chunk = upload.stream.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    out.write(chunk)
+            return archive_name
+
+        with zipfile.ZipFile(temp_file, 'w', compression=zipfile.ZIP_STORED,
+                             allowZip64=True) as archive:
+            for index, scene in enumerate(scenes, start=1):
+                if not isinstance(scene, dict):
+                    raise ValueError(f'Cảnh {index} không hợp lệ.')
+                asset_index = scene.get('asset_index')
+                if asset_index is not None:
+                    if not isinstance(asset_index, int) or not 0 <= asset_index < len(assets):
+                        raise ValueError(f'Tệp của cảnh {index} không hợp lệ.')
+                    scene['media_path'] = write_upload(
+                        archive, assets[asset_index], f'media/scene_{index:04d}', allowed_media)
+                else:
+                    scene['media_path'] = None
+
+            voice = write_upload(archive, request.files.get('voice'), 'audio/voice', allowed_audio)
+            music = write_upload(archive, request.files.get('music'), 'audio/music', allowed_audio)
+            subtitles = write_upload(archive, request.files.get('subtitles'),
+                                     'subtitles/voice', {'.srt', '.vtt'})
+            manifest['files'] = {'voice': voice, 'music': music, 'subtitles': subtitles}
+
+            csv_buffer = io.StringIO(newline='')
+            writer = csv.writer(csv_buffer)
+            writer.writerow(['scene', 'start_seconds', 'duration_seconds', 'voiceover',
+                             'media_path', 'shot_size', 'movement', 'transition'])
+            for index, scene in enumerate(scenes, start=1):
+                writer.writerow([index, scene.get('start', 0), scene.get('duration', 0),
+                                 scene.get('text', ''), scene.get('media_path') or '',
+                                 scene.get('size', ''), scene.get('movement', ''),
+                                 scene.get('transition', '')])
+            archive.writestr('timeline.csv', csv_buffer.getvalue().encode('utf-8-sig'))
+            prompts = '\n\n'.join(
+                f'SCENE {i:04d}\nIMAGE: {s.get("image_prompt", "")}\nVIDEO: {s.get("video_prompt", "")}'
+                for i, s in enumerate(scenes, start=1))
+            archive.writestr('prompts.txt', prompts)
+            batches = {'4s': [], '6s': [], '8s': [], 'long': []}
+            for index, scene in enumerate(scenes, start=1):
+                try:
+                    duration = float(scene.get('duration', 0))
+                except (TypeError, ValueError):
+                    duration = 0
+                group = '4s' if duration <= 4 else '6s' if duration <= 6 else '8s' if duration <= 8 else 'long'
+                batches[group].append(
+                    f'SCENE {index:04d} · {duration:.1f}s\n{scene.get("video_prompt", "")}')
+            for group, lines in batches.items():
+                if lines:
+                    archive.writestr(f'batches/{group}_video_prompts.txt', '\n\n'.join(lines))
+            archive.writestr('manifest.json', json.dumps(manifest, ensure_ascii=False, indent=2))
+            archive.writestr('README.txt',
+                'Gói dựng BK Tools: timeline.csv, manifest.json, prompts.txt và media đã nạp.\n'
+                'Mở media trong trình dựng video, xếp theo timeline.csv, rồi thêm voice, phụ đề và nhạc.\n'
+                'Đây là gói tài sản có thể chỉnh sửa, chưa phải dự án CapCut tự động.\n')
+
+        temp_file.seek(0)
+        return send_file(temp_file, mimetype='application/zip', as_attachment=True,
+                         download_name=f'{project_name}_video_package.zip')
+    except (ValueError, json.JSONDecodeError) as error:
+        return jsonify({"status": "error", "message": str(error)}), 400
 
 # Route cho trang Thumbnail (Tool 5)
 @app.route('/thumbnail.html')
